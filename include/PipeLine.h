@@ -1,4 +1,8 @@
 /***************************************************************/
+#ifdef __linux__ 
+    #include <stdio.h>
+#endif    
+
 #define COPY_AGEX_CS_START 3 
 #define COPY_MEM_CS_START  9
 #define COPY_SR_CS_START   7

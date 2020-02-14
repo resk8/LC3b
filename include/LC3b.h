@@ -9,5 +9,10 @@
 /***************************************************************/
 #define Low16bits(x) ((x) & 0xFFFF)
 
-__attribute__((noreturn))
-inline void Exit() { system("pause"); exit(-1); }
+#ifdef __linux__ 
+    #include <cstdlib>
+    inline void Exit() { exit(-1); }
+#elif _WIN32
+    __attribute__((noreturn))
+    inline void Exit() { system("pause"); exit(-1); }
+#endif
