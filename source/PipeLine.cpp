@@ -4,11 +4,19 @@
 
 #include <iostream>
 #include <cstring>
-#include "LC3b.h"
-#include "Simulator.h"
-#include "State.h"
-#include "MicroSequencer.h"
-#include "PipeLine.h"
+#ifdef __linux__
+    #include "../include/LC3b.h"
+    #include "../include/Simulator.h"
+    #include "../include/State.h"
+    #include "../include/MicroSequencer.h"
+    #include "../include/PipeLine.h"
+#else    
+    #include "LC3b.h"
+    #include "Simulator.h"
+    #include "State.h"
+    #include "MicroSequencer.h"
+    #include "PipeLine.h"
+#endif
 
 /***************************************************************/
 /*                                                             */

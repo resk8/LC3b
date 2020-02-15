@@ -1,0 +1,15 @@
+{
+    "tasks": [
+        {
+            "label": "build clang",
+            "type": "shell",
+            "command": "cd build && cmake -D CMAKE_EXPORT_COMPILE_COMMANDS=1 .. && make && cd ..",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$clangTidyMatcher"
+            ]
+        }
+    ]
+}

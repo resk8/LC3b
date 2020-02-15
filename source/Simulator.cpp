@@ -3,12 +3,21 @@
 /***************************************************************/
 
 #include <iostream>
-#include "LC3b.h"
-#include "PipeLine.h"
-#include "MainMemory.h"
-#include "State.h"
-#include "MicroSequencer.h"
-#include "Simulator.h"
+#ifdef __linux__
+    #include "../include/LC3b.h"
+    #include "../include/PipeLine.h"
+    #include "../include/MainMemory.h"
+    #include "../include/State.h"
+    #include "../include/MicroSequencer.h"
+    #include "../include/Simulator.h"
+#else    
+    #include "LC3b.h"
+    #include "PipeLine.h"
+    #include "MainMemory.h"
+    #include "State.h"
+    #include "MicroSequencer.h"
+    #include "Simulator.h"
+#endif
 
 /*
 * Simulator constructor

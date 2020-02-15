@@ -3,9 +3,15 @@
 /***************************************************************/
 
 #include <iostream>
-#include "LC3b.h"
-#include "Simulator.h"
-#include "MainMemory.h"
+#ifdef __linux__
+    #include "../include/LC3b.h"
+    #include "../include/Simulator.h"
+    #include "../include/MainMemory.h"
+#else    
+    #include "LC3b.h"
+    #include "Simulator.h"
+    #include "MainMemory.h"
+#endif
 
 /***************************************************************/
 /*                                                             */

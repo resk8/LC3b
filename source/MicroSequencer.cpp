@@ -3,8 +3,13 @@
 /***************************************************************/
 
 #include <iostream>
-#include "LC3b.h"
-#include "MicroSequencer.h"
+#ifdef __linux__
+    #include "../include/LC3b.h"
+    #include "../include/MicroSequencer.h"
+#else    
+    #include "LC3b.h"
+    #include "MicroSequencer.h"
+#endif
 
 /***************************************************************/
 /*                                                             */

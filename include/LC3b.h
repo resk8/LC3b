@@ -12,7 +12,7 @@
 #ifdef __linux__ 
     #include <cstdlib>
     inline void Exit() { exit(-1); }
-#elif _WIN32
+#else
     __attribute__((noreturn))
     inline void Exit() { system("pause"); exit(-1); }
 #endif

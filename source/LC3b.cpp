@@ -6,9 +6,13 @@
 /***************************************************************/
 
 #include <iostream>
-#include "LC3b.h"
-#include "Simulator.h"
-
+#ifdef __linux__
+    #include "../include/LC3b.h"
+    #include "../include/Simulator.h"
+#else    
+    #include "LC3b.h"
+    #include "Simulator.h"
+#endif    
 /***************************************************************/
 /*                                                             */
 /* Procedure : main                                            */
