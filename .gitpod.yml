@@ -1,6 +1,9 @@
 tasks:
-  - init: echo "Replace me with a build script for the project."
-    command: echo "Replace me with omething that should run on every start, or just
-      remove me entirely."
-image:
+- init: >
+    mkdir -p build &&
+    cd build &&
+    cmake -D CMAKE_EXPORT_COMPILE_COMMANDS=1 .. &&
+    make &&
+    cd ..
+image: 
   file: .gitpod.Dockerfile
