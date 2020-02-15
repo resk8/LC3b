@@ -3,18 +3,10 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "SimBuild",
-            "command": "C:\\MinGW\\bin\\g++",
-            "args": [
-                "-g",
-                "${workspaceFolder}\\source\\*.cpp",
-                "-I",
-                "${workspaceFolder}\\include",
-                "-o",
-                "${workspaceFolder}\\build\\lc3bsim.exe"
-            ],
+            "label": "Windows Build",
+            "command": "cd build ; cmake -G 'MinGW Makefiles' -D CMAKE_EXPORT_COMPILE_COMMANDS=1 .. ; mingw32-make ; cd ..",
             "options": {
-                "cwd": "C:\\MinGW\\bin"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
