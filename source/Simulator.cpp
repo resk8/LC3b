@@ -16,16 +16,11 @@
 Simulator::Simulator() : 
 CYCLE_COUNT(0), 
 RUN_BIT(0)
-//CpuPipeline(*this), 
-//CpuMemory(*this), 
-//CpuState(*this),
-//CpuMicroSequencer(*this)
 {
   CpuPipeline = std::make_shared<PipeLine>(*this); 
   CpuMemory = std::make_shared<MainMemory>(*this);
   CpuState = std::make_shared<State>(*this);
   CpuMicroSequencer = std::make_shared<MicroSequencer>(*this);
- ///
 }
 
 /***************************************************************/

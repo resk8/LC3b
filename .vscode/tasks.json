@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "SimBuild",
+            "command": "C:\\MinGW\\bin\\g++",
+            "args": [
+                "-g",
+                "${workspaceFolder}\\source\\*.cpp",
+                "-I",
+                "${workspaceFolder}\\include",
+                "-o",
+                "${workspaceFolder}\\build\\lc3bsim.exe"
+            ],
+            "options": {
+                "cwd": "C:\\MinGW\\bin"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

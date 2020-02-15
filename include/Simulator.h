@@ -1,8 +1,4 @@
 #include<memory>
-//#include "Memory.h"
-//#include "MicroSequencer.h"
-//#include "PipeLine.h"
-//#include "State.h"
 
 class PipeLine;
 class MainMemory;
