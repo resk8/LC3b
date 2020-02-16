@@ -4,15 +4,10 @@
             "name": "Run Debug",
             "request": "launch",
             "type": "gdb",
-            "program": "${workspaceFolder}/build/",
-            "verbose": true,
-            "logFile": "/tmp/a.out",
-        },
-        {
-            "name": "cpp local remote",
-            "type": "gdbtarget",
-            "program": "${workspaceFolder}/build/a",
-            "request": "launch"
+            "program": "${workspaceFolder}/build/source/LC3b",
+            "args": ["ucode6.txt","exemple1.obj"],
+            "cwd": "${workspaceFolder}/doc/test",
+            "externalConsole": false
         }
     ]
 }
