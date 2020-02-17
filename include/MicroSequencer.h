@@ -1,4 +1,5 @@
 #include <map>
+#include <vector>
 
 /***************************************************************/
 /* Definition of the control store layout.                     */
@@ -106,33 +107,33 @@ class MicroSequencer
   /***************************************************************/
   /* Functions to get at the control bits.                       */
   /***************************************************************/
-  int Get_SR1_NEEDED(int *x) const    { return (x[SR1_NEEDED]); }
-  int Get_SR2_NEEDED(int *x) const    { return (x[SR2_NEEDED]); }
-  int Get_DRMUX(int *x) const         { return (x[DRMUX]);}
-  int Get_DE_BR_OP(int *x) const      { return (x[BR_OP]); } 
-  int Get_ADDR1MUX(int *x) const      { return (x[AGEX_ADDR1MUX]); }
-  int Get_ADDR2MUX(int *x) const      { return ((x[AGEX_ADDR2MUX1] << 1) + x[AGEX_ADDR2MUX0]); }
-  int Get_LSHF1(int *x) const         { return (x[AGEX_LSHF1]); }
-  int Get_ADDRESSMUX(int *x) const    { return (x[AGEX_ADDRESSMUX]); }
-  int Get_SR2MUX(int *x) const        { return (x[AGEX_SR2MUX]); }
-  int Get_ALUK(int *x) const          { return ((x[AGEX_ALUK1] << 1) + x[AGEX_ALUK0]); }
-  int Get_ALU_RESULTMUX(int *x) const { return (x[AGEX_ALU_RESULTMUX]); }
-  int Get_BR_OP(int *x) const         { return (x[MEM_BR_OP]); }
-  int Get_UNCOND_OP(int *x) const     { return (x[MEM_UNCOND_OP]); }
-  int Get_TRAP_OP(int *x) const       { return (x[MEM_TRAP_OP]); }
-  int Get_DCACHE_EN(int *x) const     { return (x[MEM_DCACHE_EN]); }
-  int Get_DCACHE_RW(int *x) const     { return (x[MEM_DCACHE_RW]); }
-  int Get_DATA_SIZE(int *x) const     { return (x[MEM_DATA_SIZE]); } 
-  int Get_DR_VALUEMUX1(int *x) const  { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
-  int Get_AGEX_LD_REG(int *x) const   { return (x[AGEX_LD_REG]); }
-  int Get_AGEX_LD_CC(int *x) const    { return (x[AGEX_LD_CC]); }
-  int Get_MEM_LD_REG(int *x) const    { return (x[MEM_LD_REG]); }
-  int Get_MEM_LD_CC(int *x) const     { return (x[MEM_LD_CC]); }
-  int Get_SR_LD_REG(int *x) const     { return (x[SR_LD_REG]); }
-  int Get_SR_LD_CC(int *x) const      { return (x[SR_LD_CC]); }
-  int Get_DE_BR_STALL(int *x) const   { return (x[BR_STALL]); }
-  int Get_AGEX_BR_STALL(int *x) const { return (x[AGEX_BR_STALL]); }
-  int Get_MEM_BR_STALL(int *x) const  { return (x[MEM_BR_STALL]); }
+  int Get_SR1_NEEDED(std::vector<int> & x) const    { return (x[SR1_NEEDED]); }
+  int Get_SR2_NEEDED(std::vector<int> & x) const    { return (x[SR2_NEEDED]); }
+  int Get_DRMUX(std::vector<int> & x) const         { return (x[DRMUX]);}
+  int Get_DE_BR_OP(std::vector<int> & x) const      { return (x[BR_OP]); } 
+  int Get_ADDR1MUX(std::vector<int> & x) const      { return (x[AGEX_ADDR1MUX]); }
+  int Get_ADDR2MUX(std::vector<int> & x) const      { return ((x[AGEX_ADDR2MUX1] << 1) + x[AGEX_ADDR2MUX0]); }
+  int Get_LSHF1(std::vector<int> & x) const         { return (x[AGEX_LSHF1]); }
+  int Get_ADDRESSMUX(std::vector<int> & x) const    { return (x[AGEX_ADDRESSMUX]); }
+  int Get_SR2MUX(std::vector<int> & x) const        { return (x[AGEX_SR2MUX]); }
+  int Get_ALUK(std::vector<int> & x) const          { return ((x[AGEX_ALUK1] << 1) + x[AGEX_ALUK0]); }
+  int Get_ALU_RESULTMUX(std::vector<int> & x) const { return (x[AGEX_ALU_RESULTMUX]); }
+  int Get_BR_OP(std::vector<int> & x) const         { return (x[MEM_BR_OP]); }
+  int Get_UNCOND_OP(std::vector<int> & x) const     { return (x[MEM_UNCOND_OP]); }
+  int Get_TRAP_OP(std::vector<int> & x) const       { return (x[MEM_TRAP_OP]); }
+  int Get_DCACHE_EN(std::vector<int> & x) const     { return (x[MEM_DCACHE_EN]); }
+  int Get_DCACHE_RW(std::vector<int> & x) const     { return (x[MEM_DCACHE_RW]); }
+  int Get_DATA_SIZE(std::vector<int> & x) const     { return (x[MEM_DATA_SIZE]); } 
+  int Get_DR_VALUEMUX1(std::vector<int> & x) const  { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
+  int Get_AGEX_LD_REG(std::vector<int> & x) const   { return (x[AGEX_LD_REG]); }
+  int Get_AGEX_LD_CC(std::vector<int> & x) const    { return (x[AGEX_LD_CC]); }
+  int Get_MEM_LD_REG(std::vector<int> & x) const    { return (x[MEM_LD_REG]); }
+  int Get_MEM_LD_CC(std::vector<int> & x) const     { return (x[MEM_LD_CC]); }
+  int Get_SR_LD_REG(std::vector<int> & x) const     { return (x[SR_LD_REG]); }
+  int Get_SR_LD_CC(std::vector<int> & x) const      { return (x[SR_LD_CC]); }
+  int Get_DE_BR_STALL(std::vector<int> & x) const   { return (x[BR_STALL]); }
+  int Get_AGEX_BR_STALL(std::vector<int> & x) const { return (x[AGEX_BR_STALL]); }
+  int Get_MEM_BR_STALL(std::vector<int> & x) const  { return (x[MEM_BR_STALL]); }
   
   void print_CS(int *CS, int num) const;
   

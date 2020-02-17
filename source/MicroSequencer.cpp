@@ -85,7 +85,7 @@ int MicroSequencer::GetMicroCodeBitsAt(int index, int bits) const
   }
   catch (const std::out_of_range& oor)
   {
-    printf("********* C++ exception *********\n");
+    printf("\n********* C++ exception *********\n");
     printf("Error: Invalid micro-code location: Index=%d, Bit=%d\n",index,bits);
     printf("C++ error code : ' %s '\n",oor.what());
 	  Exit();

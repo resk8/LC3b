@@ -26,14 +26,31 @@ void State::init_state()
   PC = N = P = 0; Z = 1;
   REGS = std::vector<int>(LC3b_REGS);
 
-  std::memset(&SR, 0 ,sizeof(PipeState_SR_stage_Struct)); 
+  std::memset(&MEM, 0, sizeof(PipeState_MEM_stage_Struct));
+  std::memset(&SR, 0 ,sizeof(PipeState_SR_stage_Struct));
   std::memset(&STALL, 0 , sizeof(PipeState_Hazards_Struct));
 }
 
 /*
 *
 */
-int State::GetRegister(int reg) const
+void State::SetProgramCounter(int val) 
+{ 
+  PC = Low16bits(val);
+}
+
+/*
+*
+*/
+int State::GetProgramCounter() const 
+{ 
+  return Low16bits(PC);
+}
+
+/*
+* return the value of the requested register
+*/
+int State::GetRegisterData(int reg) const
 {
   try
   {
@@ -41,12 +58,14 @@ int State::GetRegister(int reg) const
   }
   catch (const std::out_of_range& oor)
   {
-    printf("********* C++ exception *********\n");
+    printf("\n********* C++ exception *********\n");
     printf("Error: Invalid Register: reg=%d\n",reg);
     printf("C++ error code : %s\n",oor.what());
     Exit();  
   }
 }
+
+
 
 /***************************************************************/
 /*                                                             */
@@ -68,7 +87,7 @@ void State::rdump(FILE * dumpsim_file)
   printf("Registers:\n");
   for (k = 0; k < LC3b_REGS; k++)
   {
-	  printf("%d: 0x%04x\n", k, (GetRegister(k) & 0xFFFF));
+	  printf("%d: 0x%04x\n", k, (GetRegisterData(k) & 0xFFFF));
   }
   
   printf("\n");
@@ -82,7 +101,7 @@ void State::rdump(FILE * dumpsim_file)
   fprintf(dumpsim_file, "Registers:\n");
   for (k = 0; k < LC3b_REGS; k++)
   {
-	  fprintf(dumpsim_file, "%d: 0x%04x\n", k, (GetRegister(k) & 0xFFFF));
+	  fprintf(dumpsim_file, "%d: 0x%04x\n", k, (GetRegisterData(k) & 0xFFFF));
   }
 
   fprintf(dumpsim_file, "\n");

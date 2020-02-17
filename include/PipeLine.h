@@ -2,6 +2,7 @@
 #ifdef __linux__ 
     #include <stdio.h>
 #endif    
+#include <vector>
 
 #define COPY_AGEX_CS_START 3 
 #define COPY_MEM_CS_START  9
@@ -20,26 +21,31 @@ int DE_NPC,
     AGEX_CC,
     AGEX_IR,
     AGEX_DRID,
-    AGEX_V,
-    AGEX_CS[20],
+    AGEX_V;
+
+std::vector<int> AGEX_CS;
+
     /* MEM latches */
-    MEM_NPC,
+int MEM_NPC,
     MEM_ALU_RESULT,
     MEM_ADDRESS,
     MEM_CC,
     MEM_IR,
     MEM_DRID,
-    MEM_V,
-    MEM_CS[11],
+    MEM_V;
+
+std::vector<int> MEM_CS;
+
     /* SR latches */
-    SR_NPC, 
+int SR_NPC, 
     SR_DATA,
     SR_ALU_RESULT, 
     SR_ADDRESS,
     SR_IR,
     SR_DRID,
-    SR_V,
-    SR_CS[4];  
+    SR_V;
+
+std::vector<int> SR_CS;
 } PipeState_Entry;
 
 class Simulator;
@@ -63,6 +69,8 @@ class PipeLine
   void MEM_stage();
   void SR_stage();
   void PropagatePipeLine();
+  bool IsStallDetected();
+  bool IsBranchTaken();
 
   private:
   Simulator & _simulator;

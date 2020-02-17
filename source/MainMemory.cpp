@@ -42,7 +42,7 @@ int MainMemory::GetLowerByteAt(int address) const
   }
   catch (const std::out_of_range& oor)
   {
-    printf("********* C++ exception *********\n");
+    printf("\n********* C++ exception *********\n");
     printf("Error: Invalid Memory Location: addr=%x\n",address);
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
@@ -68,7 +68,7 @@ int MainMemory::GetUpperByteAt(int address) const
   }
   catch (const std::out_of_range& oor)
   {
-    printf("********* C++ exception *********\n");
+    printf("\n********* C++ exception *********\n");
     printf("Error: Invalid Memory Location: addr=%x\n",address);
     printf("C++ error code : %s\n",oor.what());
 	Exit();

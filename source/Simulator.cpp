@@ -74,8 +74,6 @@ void Simulator::cycle()
 /***************************************************************/
 void Simulator::run(int num_cycles) 
 {
-  int i;
-  
   if (RUN_BIT == FALSE) 
   {
     printf("Can't simulate, Simulator is halted\n\n");
@@ -83,7 +81,7 @@ void Simulator::run(int num_cycles)
   }
 
   printf("Simulating for %d cycles...\n\n", num_cycles);
-  for (i = 0; i < num_cycles; i++) 
+  for (auto i = 0; i < num_cycles; i++) 
   {
     if (state().GetProgramCounter() == 0x0000) 
     {
@@ -188,11 +186,10 @@ void Simulator::get_command(FILE * dumpsim_file)
 /**************************************************************/
 void Simulator::load_program(char *program_filename) 
 {
-  FILE * prog;
-  int ii, word, program_base;
+  int word, program_base;
 
   /* Open program file. */
-  prog = fopen(program_filename, "r");
+  auto prog = fopen(program_filename, "r");
   if (prog == NULL) 
   {
     printf("Error: Can't open program file %s\n", program_filename);
@@ -210,7 +207,7 @@ void Simulator::load_program(char *program_filename)
     Exit();
   }
 
-  ii = 0;
+  auto ii = 0;
   while (fscanf(prog, "%x\n", &word) != EOF) 
   {
     /* Make sure it fits. */
@@ -249,7 +246,7 @@ void Simulator::initialize(char *ucode_filename, char *program_filename, int num
   state().init_state(); 
   pipeline().init_pipeline();
 
-  for (int i = 0; i < num_prog_files; i++ ) 
+  for (auto i = 0; i < num_prog_files; i++ ) 
   {
 	  load_program(program_filename);
 	  while(*program_filename++ != '\0');
