@@ -15,13 +15,17 @@
             "environment": [],
             "externalConsole": true,
             "MIMode": "gdb",
-            "miDebuggerPath": "C:\\MinGW\\bin\\gdb.exe",
+            "miDebuggerPath": "C:\\MinGW\\bin\\gdb-python27.exe",
             //"preLaunchTask": "build clang",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
+            "setupCommands": [                
+                { 
+                    "text": "source ${workspaceFolder}\\.gdbinit",
+                    "ignoreFailures": true
+                },
+                { 
                     "text": "-enable-pretty-printing",
-                }
+                    "ignoreFailures": true
+                }                
             ]
         }
     ]

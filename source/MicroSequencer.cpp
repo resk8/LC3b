@@ -21,7 +21,6 @@
 void MicroSequencer::init_control_store(char *ucode_filename) 
 {
   FILE *ucode;
-  int i, j, index;
   char line[200];
 
   printf("Loading Control Store from file: %s\n", ucode_filename);
@@ -34,7 +33,7 @@ void MicroSequencer::init_control_store(char *ucode_filename)
   }
 
   /* Read a line for each row in the control store. */
-  for(i = 0; i < CONTROL_STORE_ROWS; i++) 
+  for(auto i = 0; i < CONTROL_STORE_ROWS; i++) 
   {
     if (fscanf(ucode, "%[^\n]\n", line) == EOF) 
     {
@@ -43,9 +42,9 @@ void MicroSequencer::init_control_store(char *ucode_filename)
     }  
 
     /* Put in bits one at a time. */
-    index = 0;
+    auto index = 0;
 
-    for (j = 0; j < NUM_CONTROL_STORE_BITS; j++) 
+    for (auto j = 0; j < NUM_CONTROL_STORE_BITS; j++) 
     {
       /* Needs to find enough bits in line. */
       if (line[index] == '\0') 
@@ -77,7 +76,7 @@ void MicroSequencer::init_control_store(char *ucode_filename)
 /*
 *
 */
-int MicroSequencer::GetMicroCodeBitsAt(int index, int bits) const
+uint_16 MicroSequencer::GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const
 {
   try
   {
@@ -95,7 +94,7 @@ int MicroSequencer::GetMicroCodeBitsAt(int index, int bits) const
 /*
 *
 */
-void MicroSequencer::SetMicroCodeBitsAt(int index, int bit, int val)
+void MicroSequencer::SetMicroCodeBitsAt(uint_16 index, uint_16 bit, uint_16 val)
 {
   CONTROL_STORE[index][bit] = val;
 }
@@ -103,10 +102,9 @@ void MicroSequencer::SetMicroCodeBitsAt(int index, int bit, int val)
 /*
 *
 */
-void MicroSequencer::print_CS(int *CS, int num) const
+void MicroSequencer::print_CS(std::vector<uint16_t> &CS, int num) const
 {
-  int ii ;
-  for ( ii = 0 ; ii < num; ii++) {
+  for ( auto ii = 0 ; ii < num; ii++) {
     printf("%d",CS[ii]);
   }
   printf("\n");

@@ -32,9 +32,9 @@ void PipeLine::init_pipeline()
   std::memset(&PS, 0 ,sizeof(PipeState_Entry)); 
   std::memset(&NEW_PS, 0 , sizeof(PipeState_Entry));
 
-  PS.AGEX_CS = NEW_PS.AGEX_CS = std::vector<int>(NUM_AGEX_CS_BITS);
-  PS.MEM_CS = NEW_PS.MEM_CS = std::vector<int>(NUM_MEM_CS_BITS);
-  PS.SR_CS = NEW_PS.SR_CS = std::vector<int>(NUM_SR_CS_BITS);
+  PS.AGEX_CS = NEW_PS.AGEX_CS = std::vector<bool>(NUM_AGEX_CS_BITS);
+  PS.MEM_CS = NEW_PS.MEM_CS = std::vector<bool>(NUM_MEM_CS_BITS);
+  PS.SR_CS = NEW_PS.SR_CS = std::vector<bool>(NUM_SR_CS_BITS);
 }
 
 /***************************************************************/
@@ -295,7 +295,7 @@ void PipeLine::SR_stage()
 /************************* MEM_stage() *************************/
 void PipeLine::MEM_stage() 
 {
-  int ii,jj = 0;
+  uint_16 ii,jj = 0;
   
   /* your code for MEM stage goes here */
 
@@ -316,8 +316,8 @@ void PipeLine::MEM_stage()
 /************************* AGEX_stage() *************************/
 void PipeLine::AGEX_stage() 
 {
-  int ii, jj = 0;
-  int LD_MEM; /* You need to write code to compute the value of LD.MEM
+  uint_16 ii, jj = 0;
+  uint_16 LD_MEM; /* You need to write code to compute the value of LD.MEM
 		 signal */
 
   /* your code for AGEX stage goes here */
@@ -345,11 +345,11 @@ void PipeLine::AGEX_stage()
 void PipeLine::DE_stage() 
 {
   MicroSequencer & micro_sequencer =  simulator().microsequencer();
-  int CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
+  uint_16 CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
 			                           set the value of this variable. Look
 			                           at the figure for DE stage */ 
-  int ii, jj = 0;
-  int LD_AGEX; /* You need to write code to compute the value of
+  uint_16 ii, jj = 0;
+  uint_16 LD_AGEX; /* You need to write code to compute the value of
 		              LD.AGEX signal */
 
   /* your code for DE stage goes here */
@@ -385,7 +385,7 @@ void PipeLine::FETCH_stage()
   MEM_Stage_Entry & mem_stage =  simulator().state().MemStage();
   Stall_Entry & stall = simulator().state().Stall();
   MainMemory & memory = simulator().memory();
-  int new_pc, instruction;
+  uint_16 new_pc, instruction;
 
   //get the instruction from the instruction cache and the ready bit
   memory.icache_access(cpu_state.GetProgramCounter(),&instruction,&stall.icache_r);
@@ -420,8 +420,8 @@ void PipeLine::FETCH_stage()
   auto ld_de = (stall.dep_stall || stall.mem_stall) ? 0 : 1;
   if(ld_de)
   {
-    NEW_PS.DE_IR = Low16bits(instruction);
-    NEW_PS.DE_NPC = Low16bits(de_npc);
+    NEW_PS.DE_IR = instruction;
+    NEW_PS.DE_NPC = de_npc;
 
     //DE.valid is 0 if stall was detected or a branch
     //was not taken. Ohterwise, stage is good to go

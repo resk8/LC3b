@@ -1,4 +1,5 @@
 #include<memory>
+#include<vector>
 
 class PipeLine;
 class MainMemory;
@@ -16,17 +17,16 @@ class Simulator
   State & state() {return *CpuState; }
   MicroSequencer & microsequencer() {return *CpuMicroSequencer; }
   
-  void help();
-  void print_CS(int *CS, int num);
+  void help();  
   void cycle();
   void run(int num_cycles);
   void go();
   void idump(FILE * dumpsim_file);
   void get_command(FILE * dumpsim_file);  
   void load_program(char *program_filename);
-  void initialize(char *ucode_filename, char *program_filename, int num_prog_files);
-  int GetCycles() const { return CYCLE_COUNT; }
-  int GetRunBit() const { return RUN_BIT; }
+  void initialize(char *ucode_filename, char *program_filename, uint_16 num_prog_files);
+  int  GetCycles() const { return CYCLE_COUNT; }
+  bool GetRunBit() const { return RUN_BIT; }
 
   private:
   std::shared_ptr<MainMemory> CpuMemory;
@@ -39,5 +39,5 @@ class Simulator
   int CYCLE_COUNT;
 
   /* simulator signal */
-  int RUN_BIT;
+  bool RUN_BIT;
 };

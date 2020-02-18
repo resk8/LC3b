@@ -22,9 +22,7 @@
 /***************************************************************/
 void MainMemory::init_memory()
 {
-  int i;
-  
-  for (i=0; i < WORDS_IN_MEM; i++) 
+  for (auto i=0; i < WORDS_IN_MEM; i++) 
   {
     MEMORY[i][0] = 0;
     MEMORY[i][1] = 0;
@@ -34,7 +32,7 @@ void MainMemory::init_memory()
 /*
 *
 */
-int MainMemory::GetLowerByteAt(int address) const
+uint_16 MainMemory::GetLowerByteAt(uint_16 address) const
 {
   try
   {
@@ -52,7 +50,7 @@ int MainMemory::GetLowerByteAt(int address) const
 /*
 *
 */
-void MainMemory::SetLowerByteAt(int address, int val)
+void MainMemory::SetLowerByteAt(uint_16 address, uint_16 val)
 {
   MEMORY[address][0] = val;
 }
@@ -60,7 +58,7 @@ void MainMemory::SetLowerByteAt(int address, int val)
 /*
 *
 */
-int MainMemory::GetUpperByteAt(int address) const
+uint_16 MainMemory::GetUpperByteAt(uint_16 address) const
 {
   try
   {
@@ -78,7 +76,7 @@ int MainMemory::GetUpperByteAt(int address) const
 /*
 *
 */
-void MainMemory::SetUpperByteAt(int address, int val)
+void MainMemory::SetUpperByteAt(uint_16 address, uint_16 val)
 {
   MEMORY[address][1] = val;
 }
@@ -88,19 +86,19 @@ void MainMemory::SetUpperByteAt(int address, int val)
 /* dcache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::dcache_access(int dcache_addr, int *read_word, int write_word, int *dcache_r, int mem_w0, int mem_w1) 
+void MainMemory::dcache_access(uint_16 dcache_addr, uint_16 *read_word, uint_16 write_word, bool *dcache_r, uint_16 mem_w0, uint_16 mem_w1) 
 {  
-  int addr = dcache_addr >> 1 ; 
-  int random = simulator().GetCycles() % 9;
+  auto addr = dcache_addr >> 1 ; 
+  auto random = simulator().GetCycles() % 9;
 
   if (!random) 
   {
-    *dcache_r = 0;
+    *dcache_r = false;
     *read_word = 0xfeed ;
   }
   else 
   {
-    *dcache_r = 1;    
+    *dcache_r = true;    
     *read_word = (GetUpperByteAt(addr) << 8) | (GetLowerByteAt(addr) & 0x00FF);
     if(mem_w0) 
       SetLowerByteAt(addr,write_word & 0x00FF);
@@ -113,19 +111,19 @@ void MainMemory::dcache_access(int dcache_addr, int *read_word, int write_word, 
 /* icache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::icache_access(int icache_addr, int *read_word, int *icache_r) 
+void MainMemory::icache_access(uint_16 icache_addr, uint_16 *read_word, bool *icache_r) 
 {	
-  int addr = icache_addr >> 1 ; 
-  int random = simulator().GetCycles() % 13;
+  auto addr = icache_addr >> 1 ; 
+  auto random = simulator().GetCycles() % 13;
 
   if (!random) 
   {
-    *icache_r = 0;
+    *icache_r = false;
     *read_word = 0xfeed;
   }
   else 
   {
-    *icache_r = 1;
+    *icache_r = true;
     *read_word = GetUpperByteAt(addr) << 8 | GetLowerByteAt(addr);
   }
 }
@@ -137,9 +135,9 @@ void MainMemory::icache_access(int icache_addr, int *read_word, int *icache_r)
 /* Purpose   : Dump a region of memory to the output file.     */
 /*                                                             */
 /***************************************************************/
-void MainMemory::mdump(FILE * dumpsim_file, int start, int stop)
+void MainMemory::mdump(FILE * dumpsim_file, uint_16 start, uint_16 stop)
 {
-  int address; /* this is a byte address */
+  uint_16 address; /* this is a byte address */
 
   printf("\nMemory content [0x%04x..0x%04x] :\n", start, stop);
   printf("-------------------------------------\n");

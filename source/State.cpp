@@ -23,8 +23,10 @@
 /***************************************************************/
 void State::init_state() 
 {  
-  PC = N = P = 0; Z = 1;
-  REGS = std::vector<int>(LC3b_REGS);
+  PC = 0;
+  N = P = 0; 
+  Z = 1;
+  REGS = std::vector<uint_16>(LC3b_REGS);
 
   std::memset(&MEM, 0, sizeof(PipeState_MEM_stage_Struct));
   std::memset(&SR, 0 ,sizeof(PipeState_SR_stage_Struct));
@@ -32,25 +34,9 @@ void State::init_state()
 }
 
 /*
-*
-*/
-void State::SetProgramCounter(int val) 
-{ 
-  PC = Low16bits(val);
-}
-
-/*
-*
-*/
-int State::GetProgramCounter() const 
-{ 
-  return Low16bits(PC);
-}
-
-/*
 * return the value of the requested register
 */
-int State::GetRegisterData(int reg) const
+uint_16 State::GetRegisterData(uint_16 reg) const
 {
   try
   {
@@ -65,8 +51,6 @@ int State::GetRegisterData(int reg) const
   }
 }
 
-
-
 /***************************************************************/
 /*                                                             */
 /* Procedure : rdump                                           */
@@ -76,16 +60,14 @@ int State::GetRegisterData(int reg) const
 /*                                                             */
 /***************************************************************/
 void State::rdump(FILE * dumpsim_file) 
-{
-  int k; 
-
+{  
   printf("\nCurrent architectural state :\n");
   printf("-------------------------------------\n");
   printf("Cycle Count : %d\n", simulator().GetCycles());
   printf("CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter());
   printf("CCs: N = %d  Z = %d  P = %d\n", GetNBit(), GetZBit(), GetPBit());
   printf("Registers:\n");
-  for (k = 0; k < LC3b_REGS; k++)
+  for (auto k = 0; k < LC3b_REGS; k++)
   {
 	  printf("%d: 0x%04x\n", k, (GetRegisterData(k) & 0xFFFF));
   }
@@ -99,7 +81,7 @@ void State::rdump(FILE * dumpsim_file)
   fprintf(dumpsim_file, "CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter());
   fprintf(dumpsim_file, "CCs: N = %d  Z = %d  P = %d\n", GetNBit(), GetZBit(), GetPBit());
   fprintf(dumpsim_file, "Registers:\n");
-  for (k = 0; k < LC3b_REGS; k++)
+  for (auto k = 0; k < LC3b_REGS; k++)
   {
 	  fprintf(dumpsim_file, "%d: 0x%04x\n", k, (GetRegisterData(k) & 0xFFFF));
   }

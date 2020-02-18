@@ -4,6 +4,8 @@
 #define TRUE  1
 #define FALSE 0
 
+typedef unsigned short uint_16;
+
 /***************************************************************/
 /* Use this to avoid overflowing 16 bits on the bus.           */
 /***************************************************************/

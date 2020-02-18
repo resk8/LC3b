@@ -131,7 +131,7 @@ void Simulator::go()
 void Simulator::get_command(FILE * dumpsim_file) 
 {
   char buffer[20];
-  int start, stop, cycles;
+  uint_16 start, stop, cycles;
 
   printf("LC-3b-SIM> ");
   scanf("%s", buffer);
@@ -186,7 +186,7 @@ void Simulator::get_command(FILE * dumpsim_file)
 /**************************************************************/
 void Simulator::load_program(char *program_filename) 
 {
-  int word, program_base;
+  uint_16 word, program_base;
 
   /* Open program file. */
   auto prog = fopen(program_filename, "r");
@@ -211,7 +211,8 @@ void Simulator::load_program(char *program_filename)
   while (fscanf(prog, "%x\n", &word) != EOF) 
   {
     /* Make sure it fits. */
-    if (program_base + ii >= WORDS_IN_MEM) 
+    auto program_memory = program_base + ii;
+    if (program_memory >= WORDS_IN_MEM) 
     {
       printf("Error: Program file %s is too long to fit in memory. %x\n", program_filename, ii);
       Exit();
@@ -239,7 +240,7 @@ void Simulator::load_program(char *program_filename)
 /*             and set up initial state of the machine.        */
 /*                                                             */
 /***************************************************************/
-void Simulator::initialize(char *ucode_filename, char *program_filename, int num_prog_files) 
+void Simulator::initialize(char *ucode_filename, char *program_filename, uint_16 num_prog_files) 
 {
   microsequencer().init_control_store(ucode_filename);
   memory().init_memory();
