@@ -9,7 +9,11 @@
             },
             "problemMatcher": [
                 "$clangTidyMatcher"
-            ]
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

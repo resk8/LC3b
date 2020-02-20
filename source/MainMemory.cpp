@@ -47,7 +47,7 @@ uint16_t MainMemory::GetLowerByteAt(uint16_t address) const
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Low byte read to invalid memory location: addr=%x\n",address);
+    printf("Error: Low byte read to invalid memory location: addr=0x%04hX\n",address);
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -65,7 +65,7 @@ void MainMemory::SetLowerByteAt(uint16_t address, uint16_t val)
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Low byte write to invalid memory location: addr=%x\n",address);
+    printf("Error: Low byte write to invalid memory location: addr=0x%04hX\n",address);
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -83,7 +83,7 @@ uint16_t MainMemory::GetUpperByteAt(uint16_t address) const
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: High byte read to invalid memory location: addr=%x\n",address);
+    printf("Error: High byte read to invalid memory location: addr=0x%04hX\n",address);
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -101,7 +101,7 @@ void MainMemory::SetUpperByteAt(uint16_t address, uint16_t val)
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: High byte write to invalid memory location: addr=%x\n",address);
+    printf("Error: High byte write to invalid memory location: addr=0x%04hXs\n",address);
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }

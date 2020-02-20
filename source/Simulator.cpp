@@ -184,7 +184,7 @@ void Simulator::get_command(FILE * dumpsim_file)
 /**************************************************************/
 void Simulator::load_program(char *program_filename) 
 {
-  uint16_t word, program_base;
+  int word, program_base;
 
   /* Open program file. */
   auto prog = fopen(program_filename, "r");
