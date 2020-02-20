@@ -1,5 +1,10 @@
 #include <map>
 #include <vector>
+#ifdef __linux__ 
+    #include "../include/LC3b.h"
+#else
+    #include "LC3b.h"
+#endif
 
 /***************************************************************/
 /* Definition of the control store layout.                     */
@@ -95,42 +100,42 @@ class MicroSequencer
 
   void Initialize();
   void init_control_store(char *ucode_filename);
-  void SetMicroCodeBitsAt(uint_16 index, uint_16 bits, uint_16 val);
-  uint_16 GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const;
-  std::vector<uint_16> & GetMicroCodeAt(uint_16 row);
+  void SetMicroCodeBitsAt(uint16_t index, uint16_t bits, uint16_t val);
+  uint16_t GetMicroCodeBitsAt(uint16_t index, uint16_t bits) const;
+  std::vector<uint16_t> & GetMicroCodeAt(uint16_t row);
 
   /***************************************************************/
   /* Functions to get at the control bits.                       */
   /***************************************************************/
-  uint_16 Get_SR1_NEEDED(std::vector<uint_16> & x) const    { return (x[SR1_NEEDED]); }
-  uint_16 Get_SR2_NEEDED(std::vector<uint_16> & x) const    { return (x[SR2_NEEDED]); }
-  uint_16 Get_DRMUX(std::vector<uint_16> & x) const         { return (x[DRMUX]);}
-  uint_16 Get_DE_BR_OP(std::vector<uint_16> & x) const      { return (x[BR_OP]); } 
-  uint_16 Get_ADDR1MUX(std::vector<uint_16> & x) const      { return (x[AGEX_ADDR1MUX]); }
-  uint_16 Get_ADDR2MUX(std::vector<uint_16> & x) const      { return ((x[AGEX_ADDR2MUX1] << 1) + x[AGEX_ADDR2MUX0]); }
-  uint_16 Get_LSHF1(std::vector<uint_16> & x) const         { return (x[AGEX_LSHF1]); }
-  uint_16 Get_ADDRESSMUX(std::vector<uint_16> & x) const    { return (x[AGEX_ADDRESSMUX]); }
-  uint_16 Get_SR2MUX(std::vector<uint_16> & x) const        { return (x[AGEX_SR2MUX]); }
-  uint_16 Get_ALUK(std::vector<uint_16> & x) const          { return ((x[AGEX_ALUK1] << 1) + x[AGEX_ALUK0]); }
-  uint_16 Get_ALU_RESULTMUX(std::vector<uint_16> & x) const { return (x[AGEX_ALU_RESULTMUX]); }
-  uint_16 Get_BR_OP(std::vector<uint_16> & x) const         { return (x[MEM_BR_OP]); }
-  uint_16 Get_UNCOND_OP(std::vector<uint_16> & x) const     { return (x[MEM_UNCOND_OP]); }
-  uint_16 Get_TRAP_OP(std::vector<uint_16> & x) const       { return (x[MEM_TRAP_OP]); }
-  uint_16 Get_DCACHE_EN(std::vector<uint_16> & x) const     { return (x[MEM_DCACHE_EN]); }
-  uint_16 Get_DCACHE_RW(std::vector<uint_16> & x) const     { return (x[MEM_DCACHE_RW]); }
-  uint_16 Get_DATA_SIZE(std::vector<uint_16> & x) const     { return (x[MEM_DATA_SIZE]); } 
-  uint_16 Get_DR_VALUEMUX1(std::vector<uint_16> & x) const  { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
-  uint_16 Get_AGEX_LD_REG(std::vector<uint_16> & x) const   { return (x[AGEX_LD_REG]); }
-  uint_16 Get_AGEX_LD_CC(std::vector<uint_16> & x) const    { return (x[AGEX_LD_CC]); }
-  uint_16 Get_MEM_LD_REG(std::vector<uint_16> & x) const    { return (x[MEM_LD_REG]); }
-  uint_16 Get_MEM_LD_CC(std::vector<uint_16> & x) const     { return (x[MEM_LD_CC]); }
-  uint_16 Get_SR_LD_REG(std::vector<uint_16> & x) const     { return (x[SR_LD_REG]); }
-  uint_16 Get_SR_LD_CC(std::vector<uint_16> & x) const      { return (x[SR_LD_CC]); }
-  uint_16 Get_DE_BR_STALL(std::vector<uint_16> & x) const   { return (x[BR_STALL]); }
-  uint_16 Get_AGEX_BR_STALL(std::vector<uint_16> & x) const { return (x[AGEX_BR_STALL]); }
-  uint_16 Get_MEM_BR_STALL(std::vector<uint_16> & x) const  { return (x[MEM_BR_STALL]); }
+  uint16_t Get_SR1_NEEDED(std::vector<uint16_t> & x) const    { return (x[SR1_NEEDED]); }
+  uint16_t Get_SR2_NEEDED(std::vector<uint16_t> & x) const    { return (x[SR2_NEEDED]); }
+  uint16_t Get_DRMUX(std::vector<uint16_t> & x) const         { return (x[DRMUX]);}
+  uint16_t Get_DE_BR_OP(std::vector<uint16_t> & x) const      { return (x[BR_OP]); } 
+  uint16_t Get_ADDR1MUX(std::vector<uint16_t> & x) const      { return (x[AGEX_ADDR1MUX]); }
+  uint16_t Get_ADDR2MUX(std::vector<uint16_t> & x) const      { return ((x[AGEX_ADDR2MUX1] << 1) + x[AGEX_ADDR2MUX0]); }
+  uint16_t Get_LSHF1(std::vector<uint16_t> & x) const         { return (x[AGEX_LSHF1]); }
+  uint16_t Get_ADDRESSMUX(std::vector<uint16_t> & x) const    { return (x[AGEX_ADDRESSMUX]); }
+  uint16_t Get_SR2MUX(std::vector<uint16_t> & x) const        { return (x[AGEX_SR2MUX]); }
+  uint16_t Get_ALUK(std::vector<uint16_t> & x) const          { return ((x[AGEX_ALUK1] << 1) + x[AGEX_ALUK0]); }
+  uint16_t Get_ALU_RESULTMUX(std::vector<uint16_t> & x) const { return (x[AGEX_ALU_RESULTMUX]); }
+  uint16_t Get_BR_OP(std::vector<uint16_t> & x) const         { return (x[MEM_BR_OP]); }
+  uint16_t Get_UNCOND_OP(std::vector<uint16_t> & x) const     { return (x[MEM_UNCOND_OP]); }
+  uint16_t Get_TRAP_OP(std::vector<uint16_t> & x) const       { return (x[MEM_TRAP_OP]); }
+  uint16_t Get_DCACHE_EN(std::vector<uint16_t> & x) const     { return (x[MEM_DCACHE_EN]); }
+  uint16_t Get_DCACHE_RW(std::vector<uint16_t> & x) const     { return (x[MEM_DCACHE_RW]); }
+  uint16_t Get_DATA_SIZE(std::vector<uint16_t> & x) const     { return (x[MEM_DATA_SIZE]); } 
+  uint16_t Get_DR_VALUEMUX1(std::vector<uint16_t> & x) const  { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
+  uint16_t Get_AGEX_LD_REG(std::vector<uint16_t> & x) const   { return (x[AGEX_LD_REG]); }
+  uint16_t Get_AGEX_LD_CC(std::vector<uint16_t> & x) const    { return (x[AGEX_LD_CC]); }
+  uint16_t Get_MEM_LD_REG(std::vector<uint16_t> & x) const    { return (x[MEM_LD_REG]); }
+  uint16_t Get_MEM_LD_CC(std::vector<uint16_t> & x) const     { return (x[MEM_LD_CC]); }
+  uint16_t Get_SR_LD_REG(std::vector<uint16_t> & x) const     { return (x[SR_LD_REG]); }
+  uint16_t Get_SR_LD_CC(std::vector<uint16_t> & x) const      { return (x[SR_LD_CC]); }
+  uint16_t Get_DE_BR_STALL(std::vector<uint16_t> & x) const   { return (x[BR_STALL]); }
+  uint16_t Get_AGEX_BR_STALL(std::vector<uint16_t> & x) const { return (x[AGEX_BR_STALL]); }
+  uint16_t Get_MEM_BR_STALL(std::vector<uint16_t> & x) const  { return (x[MEM_BR_STALL]); }
   
-  void print_CS(std::vector<uint_16> & CS, int num) const;
+  void print_CS(std::vector<uint16_t> & CS, int num) const;
   
   private:
   Simulator & _simulator;
@@ -138,5 +143,5 @@ class MicroSequencer
   /***************************************************************/
   /* The control store rom.                                      */
   /***************************************************************/
-  std::vector<std::vector<uint_16>> CONTROL_STORE;
+  std::vector<std::vector<uint16_t>> CONTROL_STORE;
 };

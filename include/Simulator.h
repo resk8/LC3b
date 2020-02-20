@@ -1,5 +1,10 @@
 #include<memory>
 #include<vector>
+#ifdef __linux__ 
+    #include "../include/LC3b.h"
+#else
+    #include "LC3b.h"
+#endif
 
 class PipeLine;
 class MainMemory;
@@ -24,7 +29,7 @@ class Simulator
   void idump(FILE * dumpsim_file);
   void get_command(FILE * dumpsim_file);  
   void load_program(char *program_filename);
-  void initialize(char *ucode_filename, char *program_filename, uint_16 num_prog_files);
+  void initialize(char *ucode_filename, char *program_filename, uint16_t num_prog_files);
   int  GetCycles() const { return CYCLE_COUNT; }
   bool GetRunBit() const { return RUN_BIT; }
 

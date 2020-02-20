@@ -4,10 +4,8 @@
 
 #include <iostream>
 #ifdef __linux__
-    #include "../include/LC3b.h"
     #include "../include/MicroSequencer.h"
 #else    
-    #include "LC3b.h"
     #include "MicroSequencer.h"
 #endif
 
@@ -16,7 +14,7 @@
 */
 MicroSequencer::MicroSequencer(Simulator & intance) : _simulator(intance) 
 {
-  CONTROL_STORE = std::vector<std::vector<uint_16>>(CONTROL_STORE_ROWS, std::vector<uint_16>(NUM_CONTROL_STORE_BITS));
+  CONTROL_STORE = std::vector<std::vector<uint16_t>>(CONTROL_STORE_ROWS, std::vector<uint16_t>(NUM_CONTROL_STORE_BITS));
 }
 
 /***************************************************************/
@@ -84,7 +82,7 @@ void MicroSequencer::init_control_store(char *ucode_filename)
 /*
 *
 */
-std::vector<uint_16> & MicroSequencer::GetMicroCodeAt(uint_16 row)
+std::vector<uint16_t> & MicroSequencer::GetMicroCodeAt(uint16_t row)
 {
   try
   {
@@ -102,7 +100,7 @@ std::vector<uint_16> & MicroSequencer::GetMicroCodeAt(uint_16 row)
 /*
 *
 */
-uint_16 MicroSequencer::GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const
+uint16_t MicroSequencer::GetMicroCodeBitsAt(uint16_t index, uint16_t bits) const
 {
   try
   {
@@ -120,7 +118,7 @@ uint_16 MicroSequencer::GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const
 /*
 *
 */
-void MicroSequencer::SetMicroCodeBitsAt(uint_16 index, uint_16 bit, uint_16 val)
+void MicroSequencer::SetMicroCodeBitsAt(uint16_t index, uint16_t bit, uint16_t val)
 {
   try
   {

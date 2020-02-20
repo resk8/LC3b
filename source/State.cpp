@@ -5,11 +5,9 @@
 #include <iostream>
 #include <cstring>
 #ifdef __linux__
-    #include "../include/LC3b.h"
     #include "../include/Simulator.h"
     #include "../include/State.h"
-#else    
-    #include "LC3b.h"
+#else
     #include "Simulator.h"
     #include "State.h"
 #endif
@@ -26,7 +24,7 @@ void State::init_state()
   PC = 0;
   N = P = 0; 
   Z = 1;
-  REGS = std::vector<uint_16>(LC3b_REGS);
+  REGS = std::vector<uint16_t>(LC3b_REGS);
 
   std::memset(&MEM, 0, sizeof(PipeState_MEM_stage_Struct));
   std::memset(&SR, 0 ,sizeof(PipeState_SR_stage_Struct));
@@ -36,7 +34,7 @@ void State::init_state()
 /*
 * return the value of the requested register
 */
-uint_16 State::GetRegisterData(uint_16 reg) const
+uint16_t State::GetRegisterData(uint16_t reg) const
 {
   try
   {

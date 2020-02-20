@@ -4,14 +4,12 @@
 
 #include <iostream>
 #ifdef __linux__
-    #include "../include/LC3b.h"
     #include "../include/PipeLine.h"
     #include "../include/MainMemory.h"
     #include "../include/State.h"
     #include "../include/MicroSequencer.h"
     #include "../include/Simulator.h"
-#else    
-    #include "LC3b.h"
+#else
     #include "PipeLine.h"
     #include "MainMemory.h"
     #include "State.h"
@@ -131,7 +129,7 @@ void Simulator::go()
 void Simulator::get_command(FILE * dumpsim_file) 
 {
   char buffer[20];
-  uint_16 start, stop, cycles;
+  uint16_t start, stop, cycles;
 
   printf("LC-3b-SIM> ");
   scanf("%s", buffer);
@@ -186,7 +184,7 @@ void Simulator::get_command(FILE * dumpsim_file)
 /**************************************************************/
 void Simulator::load_program(char *program_filename) 
 {
-  uint_16 word, program_base;
+  uint16_t word, program_base;
 
   /* Open program file. */
   auto prog = fopen(program_filename, "r");
@@ -240,7 +238,7 @@ void Simulator::load_program(char *program_filename)
 /*             and set up initial state of the machine.        */
 /*                                                             */
 /***************************************************************/
-void Simulator::initialize(char *ucode_filename, char *program_filename, uint_16 num_prog_files) 
+void Simulator::initialize(char *ucode_filename, char *program_filename, uint16_t num_prog_files) 
 {
   microsequencer().init_control_store(ucode_filename);
   memory().init_memory();

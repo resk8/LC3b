@@ -7,10 +7,8 @@
 
 #include <iostream>
 #ifdef __linux__
-    #include "../include/LC3b.h"
     #include "../include/Simulator.h"
-#else    
-    #include "LC3b.h"
+#else
     #include "Simulator.h"
 #endif    
 /***************************************************************/

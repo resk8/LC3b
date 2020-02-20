@@ -5,14 +5,12 @@
 #include <iostream>
 #include <cstring>
 #ifdef __linux__
-    #include "../include/LC3b.h"
     #include "../include/Simulator.h"
     #include "../include/State.h"
     #include "../include/MicroSequencer.h"
     #include "../include/MainMemory.h"
     #include "../include/PipeLine.h"
-#else    
-    #include "LC3b.h"
+#else
     #include "Simulator.h"
     #include "State.h"
     #include "MicroSequencer.h"
@@ -32,9 +30,9 @@ void PipeLine::init_pipeline()
   std::memset(&PS, 0 ,sizeof(PipeState_Entry)); 
   std::memset(&NEW_PS, 0 , sizeof(PipeState_Entry));
 
-  PS.AGEX_CS = NEW_PS.AGEX_CS = std::vector<uint_16>(NUM_AGEX_CS_BITS);
-  PS.MEM_CS = NEW_PS.MEM_CS = std::vector<uint_16>(NUM_MEM_CS_BITS);
-  PS.SR_CS = NEW_PS.SR_CS = std::vector<uint_16>(NUM_SR_CS_BITS);
+  PS.AGEX_CS = NEW_PS.AGEX_CS = std::vector<uint16_t>(NUM_AGEX_CS_BITS);
+  PS.MEM_CS = NEW_PS.MEM_CS = std::vector<uint16_t>(NUM_MEM_CS_BITS);
+  PS.SR_CS = NEW_PS.SR_CS = std::vector<uint16_t>(NUM_SR_CS_BITS);
 }
 
 /***************************************************************/
@@ -295,7 +293,7 @@ void PipeLine::SR_stage()
 /************************* MEM_stage() *************************/
 void PipeLine::MEM_stage() 
 {
-  uint_16 ii,jj = 0;
+  uint16_t ii,jj = 0;
   
   /* your code for MEM stage goes here */
 
@@ -316,8 +314,8 @@ void PipeLine::MEM_stage()
 /************************* AGEX_stage() *************************/
 void PipeLine::AGEX_stage() 
 {
-  uint_16 ii, jj = 0;
-  uint_16 LD_MEM; /* You need to write code to compute the value of LD.MEM
+  uint16_t ii, jj = 0;
+  uint16_t LD_MEM; /* You need to write code to compute the value of LD.MEM
 		 signal */
 
   /* your code for AGEX stage goes here */
@@ -345,7 +343,7 @@ void PipeLine::AGEX_stage()
 void PipeLine::DE_stage() 
 {
   MicroSequencer & micro_sequencer = simulator().microsequencer();
-  uint_16 CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
+  uint16_t CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
 			                            set the value of this variable. Look
 			                            at the figure for DE stage */ 
   auto jj = 0;
@@ -396,7 +394,7 @@ void PipeLine::FETCH_stage()
   MEM_Stage_Entry & mem_stage = simulator().state().MemStage();
   Stall_Entry & stall = simulator().state().Stall();
   MainMemory & memory = simulator().memory();
-  uint_16 new_pc, instruction;
+  uint16_t new_pc, instruction;
 
   //get the instruction from the instruction cache and the ready bit
   memory.icache_access(cpu_state.GetProgramCounter(),&instruction,&stall.icache_r);

@@ -12,11 +12,11 @@
             "args": ["ucode6.txt","exemple1.obj"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}\\doc\\test",
-            "environment": [],
+            "environment": [{"value" : "_DEBUG"}],
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:\\MinGW\\bin\\gdb-python27.exe",
-            //"preLaunchTask": "build clang",
+            "preLaunchTask": "Windows Build",
             "setupCommands": [                
                 { 
                     "text": "source ${workspaceFolder}\\.gdbinit",

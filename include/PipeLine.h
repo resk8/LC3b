@@ -1,8 +1,11 @@
 /***************************************************************/
+#include <vector>
 #ifdef __linux__ 
     #include <stdio.h>
-#endif    
-#include <vector>
+    #include "../include/LC3b.h"
+#else
+    #include "LC3b.h"
+#endif
 
 #define COPY_AGEX_CS_START 3 
 #define COPY_MEM_CS_START  9
@@ -10,7 +13,7 @@
 
 typedef struct PipeState_Entry_Struct{  
   /* DE latches */
-  uint_16 DE_NPC,
+  uint16_t DE_NPC,
           DE_IR,
           DE_V,
   /* AGEX lateches */
@@ -21,27 +24,27 @@ typedef struct PipeState_Entry_Struct{
           AGEX_IR,
           AGEX_DRID,
           AGEX_V;
-  std::vector<uint_16> AGEX_CS;
+  std::vector<uint16_t> AGEX_CS;
 
   /* MEM latches */
-  uint_16 MEM_NPC,
+  uint16_t MEM_NPC,
           MEM_ALU_RESULT,
           MEM_ADDRESS,
           MEM_CC,
           MEM_IR,
           MEM_DRID,
           MEM_V;
-  std::vector<uint_16> MEM_CS;
+  std::vector<uint16_t> MEM_CS;
 
   /* SR latches */
-  uint_16 SR_NPC, 
+  uint16_t SR_NPC, 
           SR_DATA,
           SR_ALU_RESULT, 
           SR_ADDRESS,
           SR_IR,
           SR_DRID,
           SR_V;
-  std::vector<uint_16> SR_CS;
+  std::vector<uint16_t> SR_CS;
 } PipeState_Entry;
 
 class Simulator;

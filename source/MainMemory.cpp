@@ -4,11 +4,9 @@
 
 #include <iostream>
 #ifdef __linux__
-    #include "../include/LC3b.h"
     #include "../include/Simulator.h"
     #include "../include/MainMemory.h"
 #else    
-    #include "LC3b.h"
     #include "Simulator.h"
     #include "MainMemory.h"
 #endif
@@ -18,7 +16,7 @@
 */
 MainMemory::MainMemory(Simulator & instance) : _simulator(instance) 
 {
-  MEMORY = std::vector<std::vector<uint_16>>(WORDS_IN_MEM,std::vector<uint_16>(2));
+  MEMORY = std::vector<std::vector<uint16_t>>(WORDS_IN_MEM,std::vector<uint16_t>(2));
 }
 
 /***************************************************************/
@@ -40,7 +38,7 @@ void MainMemory::init_memory()
 /*
 *
 */
-uint_16 MainMemory::GetLowerByteAt(uint_16 address) const
+uint16_t MainMemory::GetLowerByteAt(uint16_t address) const
 {
   try
   {
@@ -58,7 +56,7 @@ uint_16 MainMemory::GetLowerByteAt(uint_16 address) const
 /*
 *
 */
-void MainMemory::SetLowerByteAt(uint_16 address, uint_16 val)
+void MainMemory::SetLowerByteAt(uint16_t address, uint16_t val)
 {
   try
   {
@@ -76,7 +74,7 @@ void MainMemory::SetLowerByteAt(uint_16 address, uint_16 val)
 /*
 *
 */
-uint_16 MainMemory::GetUpperByteAt(uint_16 address) const
+uint16_t MainMemory::GetUpperByteAt(uint16_t address) const
 {
   try
   {
@@ -94,7 +92,7 @@ uint_16 MainMemory::GetUpperByteAt(uint_16 address) const
 /*
 *
 */
-void MainMemory::SetUpperByteAt(uint_16 address, uint_16 val)
+void MainMemory::SetUpperByteAt(uint16_t address, uint16_t val)
 {
   try
   {
@@ -114,7 +112,7 @@ void MainMemory::SetUpperByteAt(uint_16 address, uint_16 val)
 /* dcache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::dcache_access(uint_16 dcache_addr, uint_16 *read_word, uint_16 write_word, uint_16 *dcache_r, uint_16 mem_w0, uint_16 mem_w1) 
+void MainMemory::dcache_access(uint16_t dcache_addr, uint16_t *read_word, uint16_t write_word, uint16_t *dcache_r, uint16_t mem_w0, uint16_t mem_w1) 
 {  
   auto addr = dcache_addr >> 1 ; 
   auto random = simulator().GetCycles() % 9;
@@ -139,7 +137,7 @@ void MainMemory::dcache_access(uint_16 dcache_addr, uint_16 *read_word, uint_16 
 /* icache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::icache_access(uint_16 icache_addr, uint_16 *read_word, uint_16 *icache_r) 
+void MainMemory::icache_access(uint16_t icache_addr, uint16_t *read_word, uint16_t *icache_r) 
 {	
   auto addr = icache_addr >> 1 ; 
   auto random = simulator().GetCycles() % 13;
@@ -163,9 +161,9 @@ void MainMemory::icache_access(uint_16 icache_addr, uint_16 *read_word, uint_16 
 /* Purpose   : Dump a region of memory to the output file.     */
 /*                                                             */
 /***************************************************************/
-void MainMemory::mdump(FILE * dumpsim_file, uint_16 start, uint_16 stop)
+void MainMemory::mdump(FILE * dumpsim_file, uint16_t start, uint16_t stop)
 {
-  uint_16 address; /* this is a byte address */
+  uint16_t address; /* this is a byte address */
 
   printf("\nMemory content [0x%04x..0x%04x] :\n", start, stop);
   printf("-------------------------------------\n");
