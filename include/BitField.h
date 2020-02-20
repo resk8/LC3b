@@ -121,22 +121,6 @@ template<size_t n_bits> class bitfield
       return this->range<n_bits-1,0>()[i];
     }
 
-    //! Reverse the bitfield in place
-    /*! \todo This needs to just self-assign the range reversed */
-    void reverse()
-    {
-      std::reverse(b_.end(), b_.begin());
-    }
-
-    //! Reverse a copy of the bitfield and return it
-    /*! \todo This needs to just return the range reversed */
-    bitfield<n_bits> reversed() const
-    {
-      bitfield<n_bits> other(*this);
-      other.reverse();
-      return other;
-    }
-
   private:
     template<size_t,size_t,size_t,bool> friend struct bitfield_private::range;
 
@@ -169,7 +153,7 @@ namespace bitfield_private
       //! Copy constructor from 
       template<size_t other_parent_bits, size_t other_e, size_t other_b>
         range(range<other_parent_bits, other_e, other_b, true> const & other) :
-          parent_(other.parent), reversed_(other.reversed_)
+          parent_(other.parent)
         { }
 
       //! Assign a character string to the range, e.g. mybitset.range<4,2>() = "101";
@@ -240,40 +224,15 @@ namespace bitfield_private
       typename std::enable_if<is_const_dummy == false, bool &>::type
         operator[](size_t i)
       {
-        if(reversed_)
-          return parent_.b_[b+i];          
-        else
           return parent_.b_[e-i];
       }
 
       //! Access an element of the range (const version)
       bool operator[](size_t i) const
       {
-        if(reversed_)
-          return parent_.b_[b+i];          
-        else
           return parent_.b_[e-i];
       }
 
-      //! Reverse the bitfield in place
-      /*! This will actually reverse the bits in the original bitfield*/
-      template<bool is_const_dummy = is_const>
-      typename std::enable_if<is_const_dummy == false, void>::type
-        reverse()
-        {
-          std::reverse(&(*this)[n_range_bits-1], &(*this)[0]);
-        }
-
-      //! Return a "view" of the bitfield range with the bits reversed
-      /*! This is a non-destructive call, and will not actually reverse any bits in the parent bitfield */
-      range<parent_bits,e,b,is_const> reversed()
-      {
-        range<parent_bits,e,b,is_const> other = *this;
-        other.reversed_ = !reversed_;
-        return other;
-      }
-
       parent_type parent_;
-      bool reversed_ = false;
     };
 }
