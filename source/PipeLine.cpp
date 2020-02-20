@@ -32,9 +32,9 @@ void PipeLine::init_pipeline()
   std::memset(&PS, 0 ,sizeof(PipeState_Entry)); 
   std::memset(&NEW_PS, 0 , sizeof(PipeState_Entry));
 
-  PS.AGEX_CS = NEW_PS.AGEX_CS = std::vector<bool>(NUM_AGEX_CS_BITS);
-  PS.MEM_CS = NEW_PS.MEM_CS = std::vector<bool>(NUM_MEM_CS_BITS);
-  PS.SR_CS = NEW_PS.SR_CS = std::vector<bool>(NUM_SR_CS_BITS);
+  PS.AGEX_CS = NEW_PS.AGEX_CS = std::vector<uint_16>(NUM_AGEX_CS_BITS);
+  PS.MEM_CS = NEW_PS.MEM_CS = std::vector<uint_16>(NUM_MEM_CS_BITS);
+  PS.SR_CS = NEW_PS.SR_CS = std::vector<uint_16>(NUM_SR_CS_BITS);
 }
 
 /***************************************************************/
@@ -344,45 +344,56 @@ void PipeLine::AGEX_stage()
 /************************* DE_stage() *************************/
 void PipeLine::DE_stage() 
 {
-  MicroSequencer & micro_sequencer =  simulator().microsequencer();
+  MicroSequencer & micro_sequencer = simulator().microsequencer();
   uint_16 CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
-			                           set the value of this variable. Look
-			                           at the figure for DE stage */ 
-  uint_16 ii, jj = 0;
-  uint_16 LD_AGEX; /* You need to write code to compute the value of
+			                            set the value of this variable. Look
+			                            at the figure for DE stage */ 
+  auto jj = 0;
+  bool LD_AGEX; /* You need to write code to compute the value of
 		              LD.AGEX signal */
 
   /* your code for DE stage goes here */
+  auto de_ir_15_11 = (PS.DE_IR >> 11) & 0x1f;
+  auto de_ir_5 = (PS.DE_IR >> 5) & 0x1;
+  CONTROL_STORE_ADDRESS = ((de_ir_15_11 << 1) | de_ir_5) & 0x3f;
 
   
 
 
 
-  if (LD_AGEX) 
+  if (LD_AGEX)
   {
     /* Your code for latching into AGEX latches goes here */
-    
+    NEW_PS.AGEX_NPC = PS.DE_NPC;
 
+    NEW_PS.AGEX_IR = PS.DE_IR;
 
+    NEW_PS.AGEX_SR1 = 0; //TODO
+
+    NEW_PS.AGEX_SR2 = 0; //TODO
+
+    NEW_PS.MEM_CC = 0;   //TODO
 
     /* The code below propagates the control signals from the CONTROL
        STORE to the AGEX.CS latch. */
-    for (ii = COPY_AGEX_CS_START; ii< NUM_CONTROL_STORE_BITS; ii++) 
+    for (auto ii = COPY_AGEX_CS_START; ii< NUM_CONTROL_STORE_BITS; ii++) 
     {
       NEW_PS.AGEX_CS[jj++] = micro_sequencer.GetMicroCodeBitsAt(CONTROL_STORE_ADDRESS,ii);
     }
+
+    auto DR_MUX = micro_sequencer.Get_DRMUX(micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS));
+    NEW_PS.AGEX_DRID = (DR_MUX) ? 0x7 : (PS.DE_IR >> 8) & 0x7;
+
+    NEW_PS.AGEX_V = 0; //TODO        
   }
-
 }
-
-
 
 /************************* FETCH_stage() *************************/
 void PipeLine::FETCH_stage() 
 {
   /* your code for FETCH stage goes here */
   State & cpu_state = simulator().state();
-  MEM_Stage_Entry & mem_stage =  simulator().state().MemStage();
+  MEM_Stage_Entry & mem_stage = simulator().state().MemStage();
   Stall_Entry & stall = simulator().state().Stall();
   MainMemory & memory = simulator().memory();
   uint_16 new_pc, instruction;

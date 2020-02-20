@@ -11,6 +11,14 @@
     #include "MicroSequencer.h"
 #endif
 
+/*
+*
+*/
+MicroSequencer::MicroSequencer(Simulator & intance) : _simulator(intance) 
+{
+  CONTROL_STORE = std::vector<std::vector<uint_16>>(CONTROL_STORE_ROWS, std::vector<uint_16>(NUM_CONTROL_STORE_BITS));
+}
+
 /***************************************************************/
 /*                                                             */
 /* Procedure : init_control_store                              */
@@ -76,6 +84,24 @@ void MicroSequencer::init_control_store(char *ucode_filename)
 /*
 *
 */
+std::vector<uint_16> & MicroSequencer::GetMicroCodeAt(uint_16 row)
+{
+  try
+  {
+    return CONTROL_STORE.at(row);
+  }
+  catch (const std::out_of_range& oor)
+  {
+    printf("\n********* C++ exception *********\n");
+    printf("Error: trying to get Invalid micro-code location: Index=%d\n",row);
+    printf("C++ error code : ' %s '\n",oor.what());
+	  Exit();
+  }
+}
+
+/*
+*
+*/
 uint_16 MicroSequencer::GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const
 {
   try
@@ -85,7 +111,7 @@ uint_16 MicroSequencer::GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Invalid micro-code location: Index=%d, Bit=%d\n",index,bits);
+    printf("Error: trying to get Invalid micro-code: Index=%d, Bit=%d\n",index,bits);
     printf("C++ error code : ' %s '\n",oor.what());
 	  Exit();
   }
@@ -96,7 +122,17 @@ uint_16 MicroSequencer::GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const
 */
 void MicroSequencer::SetMicroCodeBitsAt(uint_16 index, uint_16 bit, uint_16 val)
 {
-  CONTROL_STORE[index][bit] = val;
+  try
+  {
+    CONTROL_STORE.at(index).at(bit) = val;
+  }
+  catch (const std::out_of_range& oor)
+  {
+    printf("\n********* C++ exception *********\n");
+    printf("Error: trying to set Invalid micro-code: row=%d, Bit=%d\n",index, bit);
+    printf("C++ error code : ' %s '\n",oor.what());
+	  Exit();
+  }
 }
 
 /*

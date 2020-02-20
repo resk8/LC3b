@@ -13,6 +13,14 @@
     #include "MainMemory.h"
 #endif
 
+/*
+*
+*/
+MainMemory::MainMemory(Simulator & instance) : _simulator(instance) 
+{
+  MEMORY = std::vector<std::vector<uint_16>>(WORDS_IN_MEM,std::vector<uint_16>(2));
+}
+
 /***************************************************************/
 /*                                                             */
 /* Procedure : init_memory                                     */
@@ -41,7 +49,7 @@ uint_16 MainMemory::GetLowerByteAt(uint_16 address) const
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Invalid Memory Location: addr=%x\n",address);
+    printf("Error: Low byte read to invalid memory location: addr=%x\n",address);
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -52,7 +60,17 @@ uint_16 MainMemory::GetLowerByteAt(uint_16 address) const
 */
 void MainMemory::SetLowerByteAt(uint_16 address, uint_16 val)
 {
-  MEMORY[address][0] = val;
+  try
+  {
+    MEMORY.at(address).at(0) = val;
+  }
+  catch (const std::out_of_range& oor)
+  {
+    printf("\n********* C++ exception *********\n");
+    printf("Error: Low byte write to invalid memory location: addr=%x\n",address);
+    printf("C++ error code : %s\n",oor.what());
+	  Exit();
+  }
 }
 
 /*
@@ -67,9 +85,9 @@ uint_16 MainMemory::GetUpperByteAt(uint_16 address) const
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Invalid Memory Location: addr=%x\n",address);
+    printf("Error: High byte read to invalid memory location: addr=%x\n",address);
     printf("C++ error code : %s\n",oor.what());
-	Exit();
+	  Exit();
   }
 }
 
@@ -78,7 +96,17 @@ uint_16 MainMemory::GetUpperByteAt(uint_16 address) const
 */
 void MainMemory::SetUpperByteAt(uint_16 address, uint_16 val)
 {
-  MEMORY[address][1] = val;
+  try
+  {
+    MEMORY.at(address).at(1) = val;
+  }
+  catch (const std::out_of_range& oor)
+  {
+    printf("\n********* C++ exception *********\n");
+    printf("Error: High byte write to invalid memory location: addr=%x\n",address);
+    printf("C++ error code : %s\n",oor.what());
+	  Exit();
+  }
 }
 
 /***************************************************************/
@@ -86,7 +114,7 @@ void MainMemory::SetUpperByteAt(uint_16 address, uint_16 val)
 /* dcache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::dcache_access(uint_16 dcache_addr, uint_16 *read_word, uint_16 write_word, bool *dcache_r, uint_16 mem_w0, uint_16 mem_w1) 
+void MainMemory::dcache_access(uint_16 dcache_addr, uint_16 *read_word, uint_16 write_word, uint_16 *dcache_r, uint_16 mem_w0, uint_16 mem_w1) 
 {  
   auto addr = dcache_addr >> 1 ; 
   auto random = simulator().GetCycles() % 9;
@@ -111,7 +139,7 @@ void MainMemory::dcache_access(uint_16 dcache_addr, uint_16 *read_word, uint_16 
 /* icache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::icache_access(uint_16 icache_addr, uint_16 *read_word, bool *icache_r) 
+void MainMemory::icache_access(uint_16 icache_addr, uint_16 *read_word, uint_16 *icache_r) 
 {	
   auto addr = icache_addr >> 1 ; 
   auto random = simulator().GetCycles() % 13;

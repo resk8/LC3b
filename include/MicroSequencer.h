@@ -88,47 +88,47 @@ class Simulator;
 class MicroSequencer
 {
   public:
-  MicroSequencer(Simulator & intance) : _simulator(intance) {}
+  MicroSequencer(Simulator & intance);
   ~MicroSequencer(){}
 
   Simulator & simulator() { return _simulator; }
 
   void Initialize();
-
   void init_control_store(char *ucode_filename);
-  uint_16 GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const;
   void SetMicroCodeBitsAt(uint_16 index, uint_16 bits, uint_16 val);
+  uint_16 GetMicroCodeBitsAt(uint_16 index, uint_16 bits) const;
+  std::vector<uint_16> & GetMicroCodeAt(uint_16 row);
 
   /***************************************************************/
   /* Functions to get at the control bits.                       */
   /***************************************************************/
-  bool Get_SR1_NEEDED(std::vector<bool> & x) const    { return (x[SR1_NEEDED]); }
-  bool Get_SR2_NEEDED(std::vector<bool> & x) const    { return (x[SR2_NEEDED]); }
-  bool Get_DRMUX(std::vector<bool> & x) const         { return (x[DRMUX]);}
-  bool Get_DE_BR_OP(std::vector<bool> & x) const      { return (x[BR_OP]); } 
-  bool Get_ADDR1MUX(std::vector<bool> & x) const      { return (x[AGEX_ADDR1MUX]); }
-uint_16 Get_ADDR2MUX(std::vector<bool> & x) const     { return ((x[AGEX_ADDR2MUX1] << 1) + x[AGEX_ADDR2MUX0]); }
-  bool Get_LSHF1(std::vector<bool> & x) const         { return (x[AGEX_LSHF1]); }
-  bool Get_ADDRESSMUX(std::vector<bool> & x) const    { return (x[AGEX_ADDRESSMUX]); }
-  bool Get_SR2MUX(std::vector<bool> & x) const        { return (x[AGEX_SR2MUX]); }
-uint_16 Get_ALUK(std::vector<bool> & x) const         { return ((x[AGEX_ALUK1] << 1) + x[AGEX_ALUK0]); }
-  bool Get_ALU_RESULTMUX(std::vector<bool> & x) const { return (x[AGEX_ALU_RESULTMUX]); }
-  bool Get_BR_OP(std::vector<bool> & x) const         { return (x[MEM_BR_OP]); }
-  bool Get_UNCOND_OP(std::vector<bool> & x) const     { return (x[MEM_UNCOND_OP]); }
-  bool Get_TRAP_OP(std::vector<bool> & x) const       { return (x[MEM_TRAP_OP]); }
-  bool Get_DCACHE_EN(std::vector<bool> & x) const     { return (x[MEM_DCACHE_EN]); }
-  bool Get_DCACHE_RW(std::vector<bool> & x) const     { return (x[MEM_DCACHE_RW]); }
-  bool Get_DATA_SIZE(std::vector<bool> & x) const     { return (x[MEM_DATA_SIZE]); } 
-uint_16 Get_DR_VALUEMUX1(std::vector<bool> & x) const { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
-  bool Get_AGEX_LD_REG(std::vector<bool> & x) const   { return (x[AGEX_LD_REG]); }
-  bool Get_AGEX_LD_CC(std::vector<bool> & x) const    { return (x[AGEX_LD_CC]); }
-  bool Get_MEM_LD_REG(std::vector<bool> & x) const    { return (x[MEM_LD_REG]); }
-  bool Get_MEM_LD_CC(std::vector<bool> & x) const     { return (x[MEM_LD_CC]); }
-  bool Get_SR_LD_REG(std::vector<bool> & x) const     { return (x[SR_LD_REG]); }
-  bool Get_SR_LD_CC(std::vector<bool> & x) const      { return (x[SR_LD_CC]); }
-  bool Get_DE_BR_STALL(std::vector<bool> & x) const   { return (x[BR_STALL]); }
-  bool Get_AGEX_BR_STALL(std::vector<bool> & x) const { return (x[AGEX_BR_STALL]); }
-  bool Get_MEM_BR_STALL(std::vector<bool> & x) const  { return (x[MEM_BR_STALL]); }
+  uint_16 Get_SR1_NEEDED(std::vector<uint_16> & x) const    { return (x[SR1_NEEDED]); }
+  uint_16 Get_SR2_NEEDED(std::vector<uint_16> & x) const    { return (x[SR2_NEEDED]); }
+  uint_16 Get_DRMUX(std::vector<uint_16> & x) const         { return (x[DRMUX]);}
+  uint_16 Get_DE_BR_OP(std::vector<uint_16> & x) const      { return (x[BR_OP]); } 
+  uint_16 Get_ADDR1MUX(std::vector<uint_16> & x) const      { return (x[AGEX_ADDR1MUX]); }
+  uint_16 Get_ADDR2MUX(std::vector<uint_16> & x) const      { return ((x[AGEX_ADDR2MUX1] << 1) + x[AGEX_ADDR2MUX0]); }
+  uint_16 Get_LSHF1(std::vector<uint_16> & x) const         { return (x[AGEX_LSHF1]); }
+  uint_16 Get_ADDRESSMUX(std::vector<uint_16> & x) const    { return (x[AGEX_ADDRESSMUX]); }
+  uint_16 Get_SR2MUX(std::vector<uint_16> & x) const        { return (x[AGEX_SR2MUX]); }
+  uint_16 Get_ALUK(std::vector<uint_16> & x) const          { return ((x[AGEX_ALUK1] << 1) + x[AGEX_ALUK0]); }
+  uint_16 Get_ALU_RESULTMUX(std::vector<uint_16> & x) const { return (x[AGEX_ALU_RESULTMUX]); }
+  uint_16 Get_BR_OP(std::vector<uint_16> & x) const         { return (x[MEM_BR_OP]); }
+  uint_16 Get_UNCOND_OP(std::vector<uint_16> & x) const     { return (x[MEM_UNCOND_OP]); }
+  uint_16 Get_TRAP_OP(std::vector<uint_16> & x) const       { return (x[MEM_TRAP_OP]); }
+  uint_16 Get_DCACHE_EN(std::vector<uint_16> & x) const     { return (x[MEM_DCACHE_EN]); }
+  uint_16 Get_DCACHE_RW(std::vector<uint_16> & x) const     { return (x[MEM_DCACHE_RW]); }
+  uint_16 Get_DATA_SIZE(std::vector<uint_16> & x) const     { return (x[MEM_DATA_SIZE]); } 
+  uint_16 Get_DR_VALUEMUX1(std::vector<uint_16> & x) const  { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
+  uint_16 Get_AGEX_LD_REG(std::vector<uint_16> & x) const   { return (x[AGEX_LD_REG]); }
+  uint_16 Get_AGEX_LD_CC(std::vector<uint_16> & x) const    { return (x[AGEX_LD_CC]); }
+  uint_16 Get_MEM_LD_REG(std::vector<uint_16> & x) const    { return (x[MEM_LD_REG]); }
+  uint_16 Get_MEM_LD_CC(std::vector<uint_16> & x) const     { return (x[MEM_LD_CC]); }
+  uint_16 Get_SR_LD_REG(std::vector<uint_16> & x) const     { return (x[SR_LD_REG]); }
+  uint_16 Get_SR_LD_CC(std::vector<uint_16> & x) const      { return (x[SR_LD_CC]); }
+  uint_16 Get_DE_BR_STALL(std::vector<uint_16> & x) const   { return (x[BR_STALL]); }
+  uint_16 Get_AGEX_BR_STALL(std::vector<uint_16> & x) const { return (x[AGEX_BR_STALL]); }
+  uint_16 Get_MEM_BR_STALL(std::vector<uint_16> & x) const  { return (x[MEM_BR_STALL]); }
   
   void print_CS(std::vector<uint_16> & CS, int num) const;
   
@@ -138,5 +138,5 @@ uint_16 Get_DR_VALUEMUX1(std::vector<bool> & x) const { return ((x[SR_DR_VALUEMU
   /***************************************************************/
   /* The control store rom.                                      */
   /***************************************************************/
-  std::map<uint_16,std::map<uint_16,uint_16>> CONTROL_STORE;
+  std::vector<std::vector<uint_16>> CONTROL_STORE;
 };

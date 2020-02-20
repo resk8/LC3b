@@ -11,17 +11,17 @@
 typedef struct PipeState_Entry_Struct{  
   /* DE latches */
   uint_16 DE_NPC,
-          DE_IR;
-  bool DE_V;
+          DE_IR,
+          DE_V,
   /* AGEX lateches */
-  uint16_t AGEX_NPC,
+          AGEX_NPC,
           AGEX_SR1, 
           AGEX_SR2,
           AGEX_CC,
           AGEX_IR,
-          AGEX_DRID;
-  bool AGEX_V;
-  std::vector<bool> AGEX_CS;
+          AGEX_DRID,
+          AGEX_V;
+  std::vector<uint_16> AGEX_CS;
 
   /* MEM latches */
   uint_16 MEM_NPC,
@@ -29,9 +29,9 @@ typedef struct PipeState_Entry_Struct{
           MEM_ADDRESS,
           MEM_CC,
           MEM_IR,
-          MEM_DRID;
-  bool MEM_V;
-  std::vector<bool> MEM_CS;
+          MEM_DRID,
+          MEM_V;
+  std::vector<uint_16> MEM_CS;
 
   /* SR latches */
   uint_16 SR_NPC, 
@@ -41,7 +41,7 @@ typedef struct PipeState_Entry_Struct{
           SR_IR,
           SR_DRID,
           SR_V;
-  std::vector<bool> SR_CS;
+  std::vector<uint_16> SR_CS;
 } PipeState_Entry;
 
 class Simulator;
