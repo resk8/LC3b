@@ -16,7 +16,7 @@
 */
 MainMemory::MainMemory(Simulator & instance) : _simulator(instance) 
 {
-  MEMORY = std::vector<std::vector<uint16_t>>(WORDS_IN_MEM,std::vector<uint16_t>(2));
+  MEMORY = std::vector<std::vector<uint8_t>>(WORDS_IN_MEM,std::vector<uint8_t>(2));
 }
 
 /***************************************************************/
@@ -38,7 +38,7 @@ void MainMemory::init_memory()
 /*
 *
 */
-uint16_t MainMemory::GetLowerByteAt(uint16_t address) const
+uint8_t MainMemory::GetLowerByteAt(uint16_t address) const
 {
   try
   {
@@ -56,7 +56,7 @@ uint16_t MainMemory::GetLowerByteAt(uint16_t address) const
 /*
 *
 */
-void MainMemory::SetLowerByteAt(uint16_t address, uint16_t val)
+void MainMemory::SetLowerByteAt(uint16_t address, uint8_t val)
 {
   try
   {
@@ -74,7 +74,7 @@ void MainMemory::SetLowerByteAt(uint16_t address, uint16_t val)
 /*
 *
 */
-uint16_t MainMemory::GetUpperByteAt(uint16_t address) const
+uint8_t MainMemory::GetUpperByteAt(uint16_t address) const
 {
   try
   {
@@ -92,7 +92,7 @@ uint16_t MainMemory::GetUpperByteAt(uint16_t address) const
 /*
 *
 */
-void MainMemory::SetUpperByteAt(uint16_t address, uint16_t val)
+void MainMemory::SetUpperByteAt(uint16_t address, uint8_t val)
 {
   try
   {
@@ -112,20 +112,20 @@ void MainMemory::SetUpperByteAt(uint16_t address, uint16_t val)
 /* dcache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::dcache_access(uint16_t dcache_addr, uint16_t *read_word, uint16_t write_word, uint16_t *dcache_r, uint16_t mem_w0, uint16_t mem_w1) 
+void MainMemory::dcache_access(uint16_t dcache_addr, uint16_t & read_word, uint16_t write_word, bool  & dcache_r, uint16_t mem_w0, uint16_t mem_w1) 
 {  
-  auto addr = dcache_addr >> 1 ; 
+  auto addr = uint16_t(dcache_addr >> 1); 
   auto random = simulator().GetCycles() % 9;
 
   if (!random) 
   {
-    *dcache_r = false;
-    *read_word = 0xfeed ;
+    dcache_r = false;
+    read_word = 0xfeed ;
   }
   else 
   {
-    *dcache_r = true;    
-    *read_word = (GetUpperByteAt(addr) << 8) | (GetLowerByteAt(addr) & 0x00FF);
+    dcache_r = true;    
+    read_word = (GetUpperByteAt(addr) << 8) | (GetLowerByteAt(addr) & 0x00FF);
     if(mem_w0) 
       SetLowerByteAt(addr,write_word & 0x00FF);
     if(mem_w1)
@@ -137,20 +137,20 @@ void MainMemory::dcache_access(uint16_t dcache_addr, uint16_t *read_word, uint16
 /* icache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::icache_access(uint16_t icache_addr, uint16_t *read_word, uint16_t *icache_r) 
+void MainMemory::icache_access(uint16_t icache_addr, uint16_t & read_word, bool & icache_r) 
 {	
-  auto addr = icache_addr >> 1 ; 
+  auto addr = uint16_t(icache_addr >> 1); 
   auto random = simulator().GetCycles() % 13;
 
   if (!random) 
   {
-    *icache_r = false;
-    *read_word = 0xfeed;
+    icache_r = false;
+    read_word = 0xfeed;
   }
   else 
   {
-    *icache_r = true;
-    *read_word = GetUpperByteAt(addr) << 8 | GetLowerByteAt(addr);
+    icache_r = true;
+    read_word = GetUpperByteAt(addr) << 8 | GetLowerByteAt(addr);
   }
 }
 

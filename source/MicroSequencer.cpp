@@ -14,7 +14,7 @@
 */
 MicroSequencer::MicroSequencer(Simulator & intance) : _simulator(intance) 
 {
-  CONTROL_STORE = std::vector<std::vector<uint16_t>>(CONTROL_STORE_ROWS, std::vector<uint16_t>(NUM_CONTROL_STORE_BITS));
+  CONTROL_STORE = std::vector<cs_bits>(CONTROL_STORE_ROWS, cs_bits());
 }
 
 /***************************************************************/
@@ -82,7 +82,7 @@ void MicroSequencer::init_control_store(char *ucode_filename)
 /*
 *
 */
-std::vector<uint16_t> & MicroSequencer::GetMicroCodeAt(uint16_t row)
+cs_bits & MicroSequencer::GetMicroCodeAt(uint8_t row)
 {
   try
   {
@@ -100,11 +100,11 @@ std::vector<uint16_t> & MicroSequencer::GetMicroCodeAt(uint16_t row)
 /*
 *
 */
-uint16_t MicroSequencer::GetMicroCodeBitsAt(uint16_t index, uint16_t bits) const
+bool MicroSequencer::GetMicroCodeBitsAt(uint8_t index, uint8_t bits) const
 {
   try
   {
-    return CONTROL_STORE.at(index).at(bits);
+    return CONTROL_STORE.at(index)[bits];
   }
   catch (const std::out_of_range& oor)
   {
@@ -118,11 +118,11 @@ uint16_t MicroSequencer::GetMicroCodeBitsAt(uint16_t index, uint16_t bits) const
 /*
 *
 */
-void MicroSequencer::SetMicroCodeBitsAt(uint16_t index, uint16_t bit, uint16_t val)
+void MicroSequencer::SetMicroCodeBitsAt(uint8_t index, uint8_t bit, bool val)
 {
   try
   {
-    CONTROL_STORE.at(index).at(bit) = val;
+    CONTROL_STORE.at(index)[bit] = val;
   }
   catch (const std::out_of_range& oor)
   {
@@ -136,7 +136,7 @@ void MicroSequencer::SetMicroCodeBitsAt(uint16_t index, uint16_t bit, uint16_t v
 /*
 *
 */
-void MicroSequencer::print_CS(std::vector<uint16_t> &CS, int num) const
+void MicroSequencer::print_CS(cs_bits &CS, int num) const
 {
   for ( auto ii = 0 ; ii < num; ii++) {
     printf("%d",CS[ii]);

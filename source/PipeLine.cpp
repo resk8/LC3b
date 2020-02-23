@@ -30,9 +30,9 @@ void PipeLine::init_pipeline()
   std::memset(&PS, 0 ,sizeof(PipeState_Entry)); 
   std::memset(&NEW_PS, 0 , sizeof(PipeState_Entry));
 
-  PS.AGEX_CS = NEW_PS.AGEX_CS = std::vector<uint16_t>(NUM_AGEX_CS_BITS);
-  PS.MEM_CS = NEW_PS.MEM_CS = std::vector<uint16_t>(NUM_MEM_CS_BITS);
-  PS.SR_CS = NEW_PS.SR_CS = std::vector<uint16_t>(NUM_SR_CS_BITS);
+  PS.AGEX_CS = NEW_PS.AGEX_CS = agex_cs_bits();
+  PS.MEM_CS = NEW_PS.MEM_CS = mem_cs_bits();
+  PS.SR_CS = NEW_PS.SR_CS = sr_cs_bits();
 }
 
 /***************************************************************/
@@ -259,7 +259,7 @@ void PipeLine::SR_stage()
   /* You are given the code for SR_stage to get you started. Look at
      the figure for SR stage to see how this code is implemented. */
   
-  switch (micro_sequencer.Get_DR_VALUEMUX1(PS.SR_CS))
+  switch (micro_sequencer.Get_DR_VALUEMUX1(PS.SR_CS).to_num())
   {
   case 0: 
     sr_stage.sr_reg_data = PS.SR_ADDRESS ;
@@ -280,13 +280,9 @@ void PipeLine::SR_stage()
   sr_stage.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(PS.SR_CS) & PS.SR_V ;
 
   /* CC LOGIC  */
-  sr_stage.sr_n = ((sr_stage.sr_reg_data & 0x8000) ? 1 : 0);
-  sr_stage.sr_z = ((sr_stage.sr_reg_data & 0xFFFF) ? 0 : 1);
-  sr_stage.sr_p = 0;
-  if ((!sr_stage.sr_n) && (!sr_stage.sr_z))
-  {
-    sr_stage.sr_p = 1;
-  }
+  sr_stage.sr_n = ((sr_stage.sr_reg_data[15] & 0x1) ? 1 : 0);
+  sr_stage.sr_z = ((sr_stage.sr_reg_data.to_num() & 0xFFFF) ? 0 : 1);
+  sr_stage.sr_p = ((!sr_stage.sr_n) && (!sr_stage.sr_z));
 }
 
 
@@ -351,9 +347,9 @@ void PipeLine::DE_stage()
 		              LD.AGEX signal */
 
   /* your code for DE stage goes here */
-  auto de_ir_15_11 = (PS.DE_IR >> 11) & 0x1f;
-  auto de_ir_5 = (PS.DE_IR >> 5) & 0x1;
-  CONTROL_STORE_ADDRESS = ((de_ir_15_11 << 1) | de_ir_5) & 0x3f;
+  //auto de_ir_15_11 = (PS.DE_IR >> 11) & 0x1f;
+  //auto de_ir_5 = (PS.DE_IR >> 5) & 0x1;
+  //CONTROL_STORE_ADDRESS = ((de_ir_15_11 << 1) | de_ir_5) & 0x3f;
 
   
 
@@ -361,27 +357,37 @@ void PipeLine::DE_stage()
 
   if (LD_AGEX)
   {
-    /* Your code for latching into AGEX latches goes here */
+    /*AGEX NPC*/
     NEW_PS.AGEX_NPC = PS.DE_NPC;
 
+    /*AGEX Instruction*/
     NEW_PS.AGEX_IR = PS.DE_IR;
 
+    /*AGEX SR1 needed*/
     NEW_PS.AGEX_SR1 = 0; //TODO
 
+    /*AGEX SR2 needed*/
     NEW_PS.AGEX_SR2 = 0; //TODO
 
+    /*AGEX CS*/
     NEW_PS.MEM_CC = 0;   //TODO
 
-    /* The code below propagates the control signals from the CONTROL
-       STORE to the AGEX.CS latch. */
+    /*AGEX CS bits*/
+    /*The code below propagates the control signals from the CONTROL
+      STORE to the AGEX.CS latch. */
     for (auto ii = COPY_AGEX_CS_START; ii< NUM_CONTROL_STORE_BITS; ii++) 
     {
       NEW_PS.AGEX_CS[jj++] = micro_sequencer.GetMicroCodeBitsAt(CONTROL_STORE_ADDRESS,ii);
     }
 
+    /*AGEX DRID*/
     auto DR_MUX = micro_sequencer.Get_DRMUX(micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS));
-    NEW_PS.AGEX_DRID = (DR_MUX) ? 0x7 : (PS.DE_IR >> 8) & 0x7;
+    if(DR_MUX)
+      NEW_PS.AGEX_DRID = 0x7;
+    else
+      NEW_PS.AGEX_DRID = PS.DE_IR.range<11,9>();
 
+    /*AGEX Valid*/
     NEW_PS.AGEX_V = 0; //TODO        
   }
 }
@@ -397,7 +403,7 @@ void PipeLine::FETCH_stage()
   uint16_t new_pc, instruction;
 
   //get the instruction from the instruction cache and the ready bit
-  memory.icache_access(cpu_state.GetProgramCounter(),&instruction,&stall.icache_r);
+  memory.icache_access(cpu_state.GetProgramCounter(),instruction,stall.icache_r);
 
   //the de npc latch will be the address of the next instruction
   auto de_npc = cpu_state.GetProgramCounter() + 2;
