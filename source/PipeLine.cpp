@@ -70,18 +70,18 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("\n");
 
   printf("------------- DE   Latches --------------\n");
-  printf("DE_NPC          :  0x%04x\n", PS.DE_NPC );
-  printf("DE_IR           :  0x%04x\n", PS.DE_IR );
+  printf("DE_NPC          :  0x%04x\n", PS.DE_NPC.to_num() );
+  printf("DE_IR           :  0x%04x\n", PS.DE_IR.to_num() );
   printf("DE_V            :  %d\n", PS.DE_V);
   printf("\n");
   
   printf("------------- AGEX Latches --------------\n");
-  printf("AGEX_NPC        :  0x%04x\n", PS.AGEX_NPC );
-  printf("AGEX_SR1        :  0x%04x\n", PS.AGEX_SR1 );
-  printf("AGEX_SR2        :  0x%04x\n", PS.AGEX_SR2 );
-  printf("AGEX_CC         :  %d\n", PS.AGEX_CC );
-  printf("AGEX_IR         :  0x%04x\n", PS.AGEX_IR );
-  printf("AGEX_DRID       :  %d\n", PS.AGEX_DRID);
+  printf("AGEX_NPC        :  0x%04x\n", PS.AGEX_NPC.to_num() );
+  printf("AGEX_SR1        :  0x%04x\n", PS.AGEX_SR1.to_num() );
+  printf("AGEX_SR2        :  0x%04x\n", PS.AGEX_SR2.to_num() );
+  printf("AGEX_CC         :  %d\n", PS.AGEX_CC.to_num() );
+  printf("AGEX_IR         :  0x%04x\n", PS.AGEX_IR.to_num() );
+  printf("AGEX_DRID       :  %d\n", PS.AGEX_DRID.to_num() );
   printf("AGEX_CS         :  ");
   for (auto k = 0 ; k < NUM_AGEX_CS_BITS; k++) 
   {
@@ -93,12 +93,12 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("\n");
 
   printf("------------- MEM  Latches --------------\n");
-  printf("MEM_NPC         :  0x%04x\n", PS.MEM_NPC );
-  printf("MEM_ALU_RESULT  :  0x%04x\n", PS.MEM_ALU_RESULT );
-  printf("MEM_ADDRESS     :  0x%04x\n", PS.MEM_ADDRESS ); 
-  printf("MEM_CC          :  %d\n", PS.MEM_CC );
-  printf("MEM_IR          :  0x%04x\n", PS.MEM_IR );
-  printf("MEM_DRID        :  %d\n", PS.MEM_DRID);
+  printf("MEM_NPC         :  0x%04x\n", PS.MEM_NPC.to_num() );
+  printf("MEM_ALU_RESULT  :  0x%04x\n", PS.MEM_ALU_RESULT.to_num() );
+  printf("MEM_ADDRESS     :  0x%04x\n", PS.MEM_ADDRESS.to_num() ); 
+  printf("MEM_CC          :  %d\n", PS.MEM_CC.to_num() );
+  printf("MEM_IR          :  0x%04x\n", PS.MEM_IR.to_num() );
+  printf("MEM_DRID        :  %d\n", PS.MEM_DRID.to_num() );
   printf("MEM_CS          :  ");
   for (auto k = 0 ; k < NUM_MEM_CS_BITS; k++) 
   {
@@ -110,12 +110,12 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("\n");
 
   printf("------------- SR   Latches --------------\n");
-  printf("SR_NPC          :  0x%04x\n", PS.SR_NPC );
-  printf("SR_DATA         :  0x%04x\n", PS.SR_DATA );
-  printf("SR_ALU_RESULT   :  0x%04x\n", PS.SR_ALU_RESULT );
-  printf("SR_ADDRESS      :  0x%04x\n", PS.SR_ADDRESS );
-  printf("SR_IR           :  0x%04x\n", PS.SR_IR );
-  printf("SR_DRID         :  %d\n", PS.SR_DRID);
+  printf("SR_NPC          :  0x%04x\n", PS.SR_NPC.to_num() );
+  printf("SR_DATA         :  0x%04x\n", PS.SR_DATA.to_num() );
+  printf("SR_ALU_RESULT   :  0x%04x\n", PS.SR_ALU_RESULT.to_num() );
+  printf("SR_ADDRESS      :  0x%04x\n", PS.SR_ADDRESS.to_num() );
+  printf("SR_IR           :  0x%04x\n", PS.SR_IR.to_num() );
+  printf("SR_DRID         :  %d\n", PS.SR_DRID.to_num());
   printf("SR_CS           :  ");
   for (auto k = 0 ; k < NUM_SR_CS_BITS; k++) 
   {
@@ -151,18 +151,18 @@ void PipeLine::idump(FILE * dumpsim_file)
   fprintf(dumpsim_file,"\n");
 
   fprintf(dumpsim_file,"------------- DE   Latches --------------\n");
-  fprintf(dumpsim_file,"DE_NPC          :  0x%04x\n", PS.DE_NPC );
-  fprintf(dumpsim_file,"DE_IR           :  0x%04x\n", PS.DE_IR );
+  fprintf(dumpsim_file,"DE_NPC          :  0x%04x\n", PS.DE_NPC.to_num() );
+  fprintf(dumpsim_file,"DE_IR           :  0x%04x\n", PS.DE_IR.to_num() );
   fprintf(dumpsim_file,"DE_V            :  %d\n", PS.DE_V);
   fprintf(dumpsim_file,"\n");
   
   fprintf(dumpsim_file,"------------- AGEX Latches --------------\n");
-  fprintf(dumpsim_file,"AGEX_NPC        :  0x%04x\n", PS.AGEX_NPC );
-  fprintf(dumpsim_file,"AGEX_SR1        :  0x%04x\n", PS.AGEX_SR1 );
-  fprintf(dumpsim_file,"AGEX_SR2        :  0x%04x\n", PS.AGEX_SR2 );
-  fprintf(dumpsim_file,"AGEX_CC         :  %d\n", PS.AGEX_CC );
-  fprintf(dumpsim_file,"AGEX_IR         :  0x%04x\n", PS.AGEX_IR );
-  fprintf(dumpsim_file,"AGEX_DRID       :  %d\n", PS.AGEX_DRID);
+  fprintf(dumpsim_file,"AGEX_NPC        :  0x%04x\n", PS.AGEX_NPC.to_num() );
+  fprintf(dumpsim_file,"AGEX_SR1        :  0x%04x\n", PS.AGEX_SR1.to_num() );
+  fprintf(dumpsim_file,"AGEX_SR2        :  0x%04x\n", PS.AGEX_SR2.to_num() );
+  fprintf(dumpsim_file,"AGEX_CC         :  %d\n", PS.AGEX_CC.to_num() );
+  fprintf(dumpsim_file,"AGEX_IR         :  0x%04x\n", PS.AGEX_IR.to_num() );
+  fprintf(dumpsim_file,"AGEX_DRID       :  %d\n", PS.AGEX_DRID.to_num());
   fprintf(dumpsim_file,"AGEX_CS         :  ");
   for (auto k = 0 ; k < NUM_AGEX_CS_BITS; k++) 
   {
@@ -174,12 +174,12 @@ void PipeLine::idump(FILE * dumpsim_file)
   fprintf(dumpsim_file,"\n");
 
   fprintf(dumpsim_file,"------------- MEM  Latches --------------\n");
-  fprintf(dumpsim_file,"MEM_NPC         :  0x%04x\n", PS.MEM_NPC );
-  fprintf(dumpsim_file,"MEM_ALU_RESULT  :  0x%04x\n", PS.MEM_ALU_RESULT );
-  fprintf(dumpsim_file,"MEM_ADDRESS     :  0x%04x\n", PS.MEM_ADDRESS ); 
-  fprintf(dumpsim_file,"MEM_CC          :  %d\n", PS.MEM_CC );
-  fprintf(dumpsim_file,"MEM_IR          :  0x%04x\n", PS.MEM_IR );
-  fprintf(dumpsim_file,"MEM_DRID        :  %d\n", PS.MEM_DRID);
+  fprintf(dumpsim_file,"MEM_NPC         :  0x%04x\n", PS.MEM_NPC.to_num() );
+  fprintf(dumpsim_file,"MEM_ALU_RESULT  :  0x%04x\n", PS.MEM_ALU_RESULT.to_num() );
+  fprintf(dumpsim_file,"MEM_ADDRESS     :  0x%04x\n", PS.MEM_ADDRESS.to_num() ); 
+  fprintf(dumpsim_file,"MEM_CC          :  %d\n", PS.MEM_CC.to_num() );
+  fprintf(dumpsim_file,"MEM_IR          :  0x%04x\n", PS.MEM_IR.to_num() );
+  fprintf(dumpsim_file,"MEM_DRID        :  %d\n", PS.MEM_DRID.to_num() );
   fprintf(dumpsim_file,"MEM_CS          :  ");
   for (auto k = 0 ; k < NUM_MEM_CS_BITS; k++) 
   {
@@ -191,12 +191,12 @@ void PipeLine::idump(FILE * dumpsim_file)
   fprintf(dumpsim_file,"\n");
 
   fprintf(dumpsim_file,"------------- SR   Latches --------------\n");
-  fprintf(dumpsim_file,"SR_NPC          :  0x%04x\n", PS.SR_NPC );
-  fprintf(dumpsim_file,"SR_DATA         :  0x%04x\n",PS.SR_DATA );
-  fprintf(dumpsim_file,"SR_ALU_RESULT   :  0x%04x\n", PS.SR_ALU_RESULT );
-  fprintf(dumpsim_file,"SR_ADDRESS      :  0x%04x\n", PS.SR_ADDRESS );
-  fprintf(dumpsim_file,"SR_IR           :  0x%04x\n", PS.SR_IR );
-  fprintf(dumpsim_file,"SR_DRID         :  %d\n", PS.SR_DRID);
+  fprintf(dumpsim_file,"SR_NPC          :  0x%04x\n", PS.SR_NPC.to_num() );
+  fprintf(dumpsim_file,"SR_DATA         :  0x%04x\n",PS.SR_DATA.to_num() );
+  fprintf(dumpsim_file,"SR_ALU_RESULT   :  0x%04x\n", PS.SR_ALU_RESULT.to_num() );
+  fprintf(dumpsim_file,"SR_ADDRESS      :  0x%04x\n", PS.SR_ADDRESS.to_num() );
+  fprintf(dumpsim_file,"SR_IR           :  0x%04x\n", PS.SR_IR.to_num() );
+  fprintf(dumpsim_file,"SR_DRID         :  %d\n", PS.SR_DRID.to_num());
   fprintf(dumpsim_file,"SR_CS           :  ");
   for (auto k = 0 ; k < NUM_SR_CS_BITS; k++) 
   {
@@ -280,7 +280,7 @@ void PipeLine::SR_stage()
   sr_stage.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(PS.SR_CS) & PS.SR_V ;
 
   /* CC LOGIC  */
-  sr_stage.sr_n = ((sr_stage.sr_reg_data[15] & 0x1) ? 1 : 0);
+  sr_stage.sr_n = sr_stage.sr_reg_data[15];
   sr_stage.sr_z = ((sr_stage.sr_reg_data.to_num() & 0xFFFF) ? 0 : 1);
   sr_stage.sr_p = ((!sr_stage.sr_n) && (!sr_stage.sr_z));
 }
@@ -373,16 +373,10 @@ void PipeLine::DE_stage()
     NEW_PS.MEM_CC = 0;   //TODO
 
     /*AGEX CS bits*/
-    /*The code below propagates the control signals from the CONTROL
-      STORE to the AGEX.CS latch. */
-    for (auto ii = COPY_AGEX_CS_START; ii< NUM_CONTROL_STORE_BITS; ii++) 
-    {
-      NEW_PS.AGEX_CS[jj++] = micro_sequencer.GetMicroCodeBitsAt(CONTROL_STORE_ADDRESS,ii);
-    }
+    NEW_PS.AGEX_CS = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS).range<22,3>();
 
     /*AGEX DRID*/
-    auto DR_MUX = micro_sequencer.Get_DRMUX(micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS));
-    if(DR_MUX)
+    if(micro_sequencer.Get_DRMUX(micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS)))
       NEW_PS.AGEX_DRID = 0x7;
     else
       NEW_PS.AGEX_DRID = PS.DE_IR.range<11,9>();
@@ -425,8 +419,7 @@ void PipeLine::FETCH_stage()
   }
   
   //If no stall is detected then update the Program Counter
-  auto ld_pc = !IsStallDetected();
-  if(ld_pc)
+  if(!IsStallDetected())
   {    
     cpu_state.SetProgramCounter(new_pc);
   }
