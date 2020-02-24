@@ -1,4 +1,3 @@
-#include <map>
 #include <vector>
 #ifdef __linux__ 
     #include "../include/LC3b.h"
