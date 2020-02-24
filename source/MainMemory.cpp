@@ -167,7 +167,7 @@ void MainMemory::mdump(FILE * dumpsim_file, bits16 start, bits16 stop)
 {
   uint16_t address; /* this is a byte address */
 
-  printf("\nMemory content [0x%04x..0x%04x] :\n", start, stop);
+  printf("\nMemory content [0x%04x..0x%04x] :\n", start.to_num(), stop.to_num());
   printf("-------------------------------------\n");
   for (address = (start >> 1).to_num(); address <= (stop >> 1).to_num(); address++)
   {
