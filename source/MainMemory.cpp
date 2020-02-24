@@ -124,8 +124,9 @@ void MainMemory::dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 wr
   }
   else 
   {
-    dcache_r = true;    
-    read_word = (GetUpperByteAt(addr).to_num() << 8) | (GetLowerByteAt(addr).to_num());
+    dcache_r = true;
+    read_word.range<15,8>() = GetUpperByteAt(addr).range<7,0>();
+    read_word.range<7,0>() = GetLowerByteAt(addr).range<7,0>();
     if(mem_w0) 
       SetLowerByteAt(addr,write_word.range<7,0>());
     if(mem_w1)
@@ -150,7 +151,8 @@ void MainMemory::icache_access(bits16 icache_addr, bits16 & read_word, bool & ic
   else 
   {
     icache_r = true;
-    read_word = GetUpperByteAt(addr).to_num() << 8 | GetLowerByteAt(addr).to_num();
+    read_word.range<15,8>() = GetUpperByteAt(addr).range<7,0>();
+    read_word.range<7,0>() = GetLowerByteAt(addr).range<7,0>();
   }
 }
 
@@ -167,19 +169,19 @@ void MainMemory::mdump(FILE * dumpsim_file, bits16 start, bits16 stop)
 
   printf("\nMemory content [0x%04x..0x%04x] :\n", start, stop);
   printf("-------------------------------------\n");
-  for (address = (start.to_num() >> 1); address <= (stop.to_num() >> 1); address++)
+  for (address = (start >> 1).to_num(); address <= (stop >> 1).to_num(); address++)
   {
-    printf("  0x%04x (%d) : 0x%02x%02x\n", address << 1, address << 1, GetUpperByteAt(address), GetLowerByteAt(address));
+    printf("  0x%04x (%d) : 0x%02x%02x\n", address << 1, address << 1, GetUpperByteAt(address).to_num(), GetLowerByteAt(address).to_num());
   }
   
   printf("\n");
 
   /* dump the memory contents into the dumpsim file */
-  fprintf(dumpsim_file, "\nMemory content [0x%04x..0x%04x] :\n", start, stop);
+  fprintf(dumpsim_file, "\nMemory content [0x%04x..0x%04x] :\n", start.to_num(), stop.to_num());
   fprintf(dumpsim_file, "-------------------------------------\n");
-  for (address = (start.to_num() >> 1); address <= (stop.to_num() >> 1); address++)
+  for (address = (start >> 1).to_num(); address <= (stop >> 1).to_num(); address++)
   {
-    fprintf(dumpsim_file, " 0x%04x (%d) : 0x%02x%02x\n", address << 1, address << 1, GetUpperByteAt(address), GetLowerByteAt(address));
+    fprintf(dumpsim_file, " 0x%04x (%d) : 0x%02x%02x\n", address << 1, address << 1, GetUpperByteAt(address).to_num(), GetLowerByteAt(address).to_num());
   }
 
   fprintf(dumpsim_file, "\n");
