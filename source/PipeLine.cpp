@@ -400,7 +400,7 @@ void PipeLine::FETCH_stage()
   memory.icache_access(cpu_state.GetProgramCounter(),instruction,stall.icache_r);
 
   //the de npc latch will be the address of the next instruction
-  bits16 de_npc = cpu_state.GetProgramCounter().to_num() + 2;
+  auto de_npc = cpu_state.GetProgramCounter() + 2;
 
   //Decide on what the next program counter will be
   switch(mem_stage.mem_pc_mux.to_num())
@@ -421,7 +421,7 @@ void PipeLine::FETCH_stage()
   //If no stall is detected then update the Program Counter
   if(!IsStallDetected())
   {    
-    cpu_state.SetProgramCounter(new_pc.to_num());
+    cpu_state.SetProgramCounter(new_pc);
   }
 
   //do not latch the DE in case there is a data stall or dependency stall
