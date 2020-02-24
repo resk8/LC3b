@@ -114,7 +114,7 @@ void MainMemory::SetUpperByteAt(bits16 address, bits8 val)
 /***************************************************************/
 void MainMemory::dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 write_word, bool  & dcache_r, bool mem_w0, bool mem_w1) 
 {  
-  auto addr = dcache_addr.to_num() >> 1; 
+  auto addr = dcache_addr >> 1; 
   auto random = simulator().GetCycles() % 9;
 
   if (!random) 
@@ -125,7 +125,7 @@ void MainMemory::dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 wr
   else 
   {
     dcache_r = true;    
-    read_word = (GetUpperByteAt(addr).to_num() << 8) | (GetLowerByteAt(addr).to_num() & 0x00FF);
+    read_word = (GetUpperByteAt(addr).to_num() << 8) | (GetLowerByteAt(addr).to_num());
     if(mem_w0) 
       SetLowerByteAt(addr,write_word.range<7,0>());
     if(mem_w1)
@@ -139,7 +139,7 @@ void MainMemory::dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 wr
 /***************************************************************/
 void MainMemory::icache_access(bits16 icache_addr, bits16 & read_word, bool & icache_r) 
 {	
-  auto addr = icache_addr.to_num() >> 1; 
+  auto addr = icache_addr >> 1; 
   auto random = simulator().GetCycles() % 13;
 
   if (!random) 
