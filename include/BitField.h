@@ -97,6 +97,42 @@ template<size_t n_bits> class bitfield
       range<n_bits-1,0>() = v;
     }
 
+    //
+    bitfield<n_bits> operator+(native_type v) const
+    {
+      return range<n_bits-1,0>().to_num() + v;
+    }
+
+    //
+    bitfield<n_bits> operator&(native_type v) const
+    {
+      return range<n_bits-1,0>().to_num() & v;
+    }
+
+    //
+    bitfield<n_bits> operator|(native_type v) const
+    {
+      return range<n_bits-1,0>().to_num() | v;
+    }
+
+    //
+    bitfield<n_bits> operator~() const
+    {
+      return ~range<n_bits-1,0>().to_num();
+    }
+
+    //
+    bitfield<n_bits> operator>>(native_type v) const
+    {
+      return range<n_bits-1,0>().to_num() >> v;
+    }
+
+    //
+    bitfield<n_bits> operator<<(native_type v) const
+    {
+      return range<n_bits-1,0>().to_num() << v;
+    }
+
     //! Convert the bitfield to a string for printing
     std::string to_string() const
     {

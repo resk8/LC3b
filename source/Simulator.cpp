@@ -184,7 +184,7 @@ void Simulator::get_command(FILE * dumpsim_file)
 /**************************************************************/
 void Simulator::load_program(char *program_filename) 
 {
-  bits16 word, program_base;
+  bits16 program_base; uint16_t word; 
 
   /* Open program file. */
   auto prog = fopen(program_filename, "r");
@@ -210,15 +210,16 @@ void Simulator::load_program(char *program_filename)
   {
     /* Make sure it fits. */
     auto program_memory = program_base + ii;
-    if (program_memory >= WORDS_IN_MEM) 
+    if (program_memory.to_num() >= WORDS_IN_MEM) 
     {
       printf("Error: Program file %s is too long to fit in memory. %x\n", program_filename, ii);
       Exit();
     }
 
+    bits16 instruction = word;
     /* Write the word to memory array. */
-    memory().SetLowerByteAt(program_base + ii, word & 0x00FF);
-    memory().SetUpperByteAt(program_base + ii, (word >> 8) & 0x00FF);
+    memory().SetLowerByteAt(program_base + ii, instruction.range<7,0>());
+    memory().SetUpperByteAt(program_base + ii, instruction.range<15,8>());
     ii++;
   }
 
