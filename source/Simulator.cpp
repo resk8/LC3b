@@ -81,7 +81,7 @@ void Simulator::run(int num_cycles)
   printf("Simulating for %d cycles...\n\n", num_cycles);
   for (auto i = 0; i < num_cycles; i++) 
   {
-    if (state().GetProgramCounter() == 0x0000) 
+    if (state().GetProgramCounter().to_num() == 0x0000) 
     {
       cycle();
       RUN_BIT = FALSE;
@@ -101,7 +101,7 @@ void Simulator::run(int num_cycles)
 /***************************************************************/
 void Simulator::go() 
 {
-  if ((RUN_BIT == FALSE) || (state().GetProgramCounter() == 0x0000)) 
+  if ((RUN_BIT == FALSE) || (state().GetProgramCounter().to_num() == 0x0000)) 
   {
 	  printf("Can't simulate, Simulator is halted\n\n");
 	  return;
@@ -109,7 +109,7 @@ void Simulator::go()
   
   printf("Simulating...\n\n");
   /* initialization */
-  while (state().GetProgramCounter() != 0x0000)
+  while (state().GetProgramCounter().to_num() != 0x0000)
   {
     cycle();
   }
@@ -184,7 +184,7 @@ void Simulator::get_command(FILE * dumpsim_file)
 /**************************************************************/
 void Simulator::load_program(char *program_filename) 
 {
-  int word, program_base;
+  bits16 word, program_base;
 
   /* Open program file. */
   auto prog = fopen(program_filename, "r");
@@ -222,7 +222,7 @@ void Simulator::load_program(char *program_filename)
     ii++;
   }
 
-  if (state().GetProgramCounter() == 0) 
+  if (state().GetProgramCounter().to_num() == 0) 
   {
     state().SetProgramCounter(program_base << 1);
   }

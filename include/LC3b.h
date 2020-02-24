@@ -107,6 +107,7 @@ enum SR_CS_BITS {
 
 using bits2 = bitfield<2>;
 using bits3 = bitfield<3>;
+using bits8 = bitfield<8>;
 using bits16 = bitfield<16>;
 using cs_bits = bitfield<NUM_CONTROL_STORE_BITS>;
 using agex_cs_bits = bitfield<NUM_AGEX_CS_BITS>;

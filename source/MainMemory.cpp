@@ -16,7 +16,7 @@
 */
 MainMemory::MainMemory(Simulator & instance) : _simulator(instance) 
 {
-  MEMORY = std::vector<std::vector<uint8_t>>(WORDS_IN_MEM,std::vector<uint8_t>(2));
+  MEMORY = std::vector<std::vector<bits8>>(WORDS_IN_MEM,std::vector<bits8>(2));
 }
 
 /***************************************************************/
@@ -38,16 +38,16 @@ void MainMemory::init_memory()
 /*
 *
 */
-uint8_t MainMemory::GetLowerByteAt(uint16_t address) const
+bits8 MainMemory::GetLowerByteAt(bits16 address) const
 {
   try
   {
-    return MEMORY.at(address).at(0);
+    return MEMORY.at(address.to_num()).at(0);
   }
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Low byte read to invalid memory location: addr=0x%04hX\n",address);
+    printf("Error: Low byte read to invalid memory location: addr=0x%04hX\n",address.to_num());
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -56,16 +56,16 @@ uint8_t MainMemory::GetLowerByteAt(uint16_t address) const
 /*
 *
 */
-void MainMemory::SetLowerByteAt(uint16_t address, uint8_t val)
+void MainMemory::SetLowerByteAt(bits16 address, bits8 val)
 {
   try
   {
-    MEMORY.at(address).at(0) = val;
+    MEMORY.at(address.to_num()).at(0) = val;
   }
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Low byte write to invalid memory location: addr=0x%04hX\n",address);
+    printf("Error: Low byte write to invalid memory location: addr=0x%04hX\n",address.to_num());
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -74,16 +74,16 @@ void MainMemory::SetLowerByteAt(uint16_t address, uint8_t val)
 /*
 *
 */
-uint8_t MainMemory::GetUpperByteAt(uint16_t address) const
+bits8 MainMemory::GetUpperByteAt(bits16 address) const
 {
   try
   {
-    return MEMORY.at(address).at(1);
+    return MEMORY.at(address.to_num()).at(1);
   }
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: High byte read to invalid memory location: addr=0x%04hX\n",address);
+    printf("Error: High byte read to invalid memory location: addr=0x%04hX\n",address.to_num());
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -92,16 +92,16 @@ uint8_t MainMemory::GetUpperByteAt(uint16_t address) const
 /*
 *
 */
-void MainMemory::SetUpperByteAt(uint16_t address, uint8_t val)
+void MainMemory::SetUpperByteAt(bits16 address, bits8 val)
 {
   try
   {
-    MEMORY.at(address).at(1) = val;
+    MEMORY.at(address.to_num()).at(1) = val;
   }
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: High byte write to invalid memory location: addr=0x%04hXs\n",address);
+    printf("Error: High byte write to invalid memory location: addr=0x%04hXs\n",address.to_num());
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -112,9 +112,9 @@ void MainMemory::SetUpperByteAt(uint16_t address, uint8_t val)
 /* dcache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::dcache_access(uint16_t dcache_addr, uint16_t & read_word, uint16_t write_word, bool  & dcache_r, uint16_t mem_w0, uint16_t mem_w1) 
+void MainMemory::dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 write_word, bool  & dcache_r, bool mem_w0, bool mem_w1) 
 {  
-  auto addr = uint16_t(dcache_addr >> 1); 
+  auto addr = dcache_addr.to_num() >> 1; 
   auto random = simulator().GetCycles() % 9;
 
   if (!random) 
@@ -125,11 +125,11 @@ void MainMemory::dcache_access(uint16_t dcache_addr, uint16_t & read_word, uint1
   else 
   {
     dcache_r = true;    
-    read_word = (GetUpperByteAt(addr) << 8) | (GetLowerByteAt(addr) & 0x00FF);
+    read_word = (GetUpperByteAt(addr).to_num() << 8) | (GetLowerByteAt(addr).to_num() & 0x00FF);
     if(mem_w0) 
-      SetLowerByteAt(addr,write_word & 0x00FF);
+      SetLowerByteAt(addr,write_word.range<7,0>());
     if(mem_w1)
-      SetUpperByteAt(addr,(write_word & 0xFF00) >> 8);
+      SetUpperByteAt(addr,write_word.range<15,8>());
   }
 }
 /***************************************************************/
@@ -137,9 +137,9 @@ void MainMemory::dcache_access(uint16_t dcache_addr, uint16_t & read_word, uint1
 /* icache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::icache_access(uint16_t icache_addr, uint16_t & read_word, bool & icache_r) 
+void MainMemory::icache_access(bits16 icache_addr, bits16 & read_word, bool & icache_r) 
 {	
-  auto addr = uint16_t(icache_addr >> 1); 
+  auto addr = icache_addr.to_num() >> 1; 
   auto random = simulator().GetCycles() % 13;
 
   if (!random) 
@@ -150,7 +150,7 @@ void MainMemory::icache_access(uint16_t icache_addr, uint16_t & read_word, bool 
   else 
   {
     icache_r = true;
-    read_word = GetUpperByteAt(addr) << 8 | GetLowerByteAt(addr);
+    read_word = GetUpperByteAt(addr).to_num() << 8 | GetLowerByteAt(addr).to_num();
   }
 }
 
@@ -161,13 +161,13 @@ void MainMemory::icache_access(uint16_t icache_addr, uint16_t & read_word, bool 
 /* Purpose   : Dump a region of memory to the output file.     */
 /*                                                             */
 /***************************************************************/
-void MainMemory::mdump(FILE * dumpsim_file, uint16_t start, uint16_t stop)
+void MainMemory::mdump(FILE * dumpsim_file, bits16 start, bits16 stop)
 {
   uint16_t address; /* this is a byte address */
 
   printf("\nMemory content [0x%04x..0x%04x] :\n", start, stop);
   printf("-------------------------------------\n");
-  for (address = (start >> 1); address <= (stop >> 1); address++)
+  for (address = (start.to_num() >> 1); address <= (stop.to_num() >> 1); address++)
   {
     printf("  0x%04x (%d) : 0x%02x%02x\n", address << 1, address << 1, GetUpperByteAt(address), GetLowerByteAt(address));
   }
@@ -177,7 +177,7 @@ void MainMemory::mdump(FILE * dumpsim_file, uint16_t start, uint16_t stop)
   /* dump the memory contents into the dumpsim file */
   fprintf(dumpsim_file, "\nMemory content [0x%04x..0x%04x] :\n", start, stop);
   fprintf(dumpsim_file, "-------------------------------------\n");
-  for (address = (start >> 1); address <= (stop >> 1); address++)
+  for (address = (start.to_num() >> 1); address <= (stop.to_num() >> 1); address++)
   {
     fprintf(dumpsim_file, " 0x%04x (%d) : 0x%02x%02x\n", address << 1, address << 1, GetUpperByteAt(address), GetLowerByteAt(address));
   }

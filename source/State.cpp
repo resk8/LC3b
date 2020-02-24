@@ -22,19 +22,19 @@
 void State::init_state() 
 {  
   PC = 0;
-  N = P = 0; 
+  N = P = 0;
   Z = 1;
-  REGS = std::vector<uint16_t>(LC3b_REGS);
+  REGS = std::vector<bits16>(LC3b_REGS);
 
   std::memset(&MEM, 0, sizeof(PipeState_MEM_stage_Struct));
-  std::memset(&SR, 0 ,sizeof(PipeState_SR_stage_Struct));
-  std::memset(&STALL, 0 , sizeof(PipeState_Hazards_Struct));
+  std::memset(&SR, 0,sizeof(PipeState_SR_stage_Struct));
+  std::memset(&STALL, 0, sizeof(PipeState_Hazards_Struct));
 }
 
 /*
 * return the value of the requested register
 */
-uint16_t State::GetRegisterData(uint16_t reg) const
+bits16 State::GetRegister(uint8_t reg) const
 {
   try
   {
@@ -62,12 +62,12 @@ void State::rdump(FILE * dumpsim_file)
   printf("\nCurrent architectural state :\n");
   printf("-------------------------------------\n");
   printf("Cycle Count : %d\n", simulator().GetCycles());
-  printf("CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter());
+  printf("CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter().to_num());
   printf("CCs: N = %d  Z = %d  P = %d\n", GetNBit(), GetZBit(), GetPBit());
   printf("Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
-	  printf("%d: 0x%04x\n", k, (GetRegisterData(k) & 0xFFFF));
+	  printf("%d: 0x%04x\n", k, GetRegister(k).to_num());
   }
   
   printf("\n");
@@ -81,7 +81,7 @@ void State::rdump(FILE * dumpsim_file)
   fprintf(dumpsim_file, "Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
-	  fprintf(dumpsim_file, "%d: 0x%04x\n", k, (GetRegisterData(k) & 0xFFFF));
+	  fprintf(dumpsim_file, "%d: 0x%04x\n", k, GetRegister(k).to_num());
   }
 
   fprintf(dumpsim_file, "\n");

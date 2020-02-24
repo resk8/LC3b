@@ -55,7 +55,7 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
-	  printf("%d: 0x%04x\n", k, (cpu_state.GetRegisterData(k) & 0xFFFF));
+	  printf("%d: 0x%04x\n", k, cpu_state.GetRegister(k).to_num());
   }
   
   printf("\n");
@@ -136,7 +136,7 @@ void PipeLine::idump(FILE * dumpsim_file)
   fprintf(dumpsim_file,"Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
-    fprintf(dumpsim_file,"%d: 0x%04x\n", k, (cpu_state.GetRegisterData(k) & 0xFFFF));
+    fprintf(dumpsim_file,"%d: 0x%04x\n", k, cpu_state.GetRegister(k).to_num());
   }
   
   fprintf(dumpsim_file,"\n");
@@ -394,16 +394,16 @@ void PipeLine::FETCH_stage()
   MEM_Stage_Entry & mem_stage = simulator().state().MemStage();
   Stall_Entry & stall = simulator().state().Stall();
   MainMemory & memory = simulator().memory();
-  uint16_t new_pc, instruction;
+  bits16 new_pc, instruction;
 
   //get the instruction from the instruction cache and the ready bit
   memory.icache_access(cpu_state.GetProgramCounter(),instruction,stall.icache_r);
 
   //the de npc latch will be the address of the next instruction
-  auto de_npc = cpu_state.GetProgramCounter() + 2;
+  bits16 de_npc = cpu_state.GetProgramCounter().to_num() + 2;
 
   //Decide on what the next program counter will be
-  switch(mem_stage.mem_pc_mux)
+  switch(mem_stage.mem_pc_mux.to_num())
   {
     case 0:
       new_pc = de_npc;
@@ -421,7 +421,7 @@ void PipeLine::FETCH_stage()
   //If no stall is detected then update the Program Counter
   if(!IsStallDetected())
   {    
-    cpu_state.SetProgramCounter(new_pc);
+    cpu_state.SetProgramCounter(new_pc.to_num());
   }
 
   //do not latch the DE in case there is a data stall or dependency stall
