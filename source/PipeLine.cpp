@@ -339,17 +339,16 @@ void PipeLine::AGEX_stage()
 void PipeLine::DE_stage() 
 {
   MicroSequencer & micro_sequencer = simulator().microsequencer();
-  uint16_t CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
-			                            set the value of this variable. Look
-			                            at the figure for DE stage */ 
-  auto jj = 0;
+  bitfield<6> CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
+			                                set the value of this variable. Look
+			                                at the figure for DE stage */ 
+                                      
   bool LD_AGEX; /* You need to write code to compute the value of
 		              LD.AGEX signal */
 
   /* your code for DE stage goes here */
-  //auto de_ir_15_11 = (PS.DE_IR >> 11) & 0x1f;
-  //auto de_ir_5 = (PS.DE_IR >> 5) & 0x1;
-  //CONTROL_STORE_ADDRESS = ((de_ir_15_11 << 1) | de_ir_5) & 0x3f;
+  CONTROL_STORE_ADDRESS.range<5,1>() = PS.DE_IR.range<15,11>();
+  CONTROL_STORE_ADDRESS[0] = PS.DE_IR[5];
 
   
 
@@ -373,10 +372,10 @@ void PipeLine::DE_stage()
     NEW_PS.MEM_CC = 0;   //TODO
 
     /*AGEX CS bits*/
-    NEW_PS.AGEX_CS = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS).range<22,3>();
+    NEW_PS.AGEX_CS = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num()).range<22,3>();
 
     /*AGEX DRID*/
-    if(micro_sequencer.Get_DRMUX(micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS)))
+    if(micro_sequencer.Get_DRMUX(micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num())))
       NEW_PS.AGEX_DRID = 0x7;
     else
       NEW_PS.AGEX_DRID = PS.DE_IR.range<11,9>();
