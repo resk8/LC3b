@@ -105,6 +105,15 @@ enum SR_CS_BITS {
   NUM_SR_CS_BITS
 };
 
+enum Stages {
+  FETCH,
+  DECODE,
+  AGEX,
+  MEMORY,
+  STORE,
+  UNDEFINED
+};
+
 using bits2 = bitfield<2>;
 using bits3 = bitfield<3>;
 using bits8 = bitfield<8>;

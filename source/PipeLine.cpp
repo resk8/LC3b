@@ -33,6 +33,8 @@ void PipeLine::init_pipeline()
   PS.AGEX_CS = NEW_PS.AGEX_CS = agex_cs_bits();
   PS.MEM_CS = NEW_PS.MEM_CS = mem_cs_bits();
   PS.SR_CS = NEW_PS.SR_CS = sr_cs_bits();
+
+  SetStage(UNDEFINED);
 }
 
 /***************************************************************/
@@ -211,7 +213,34 @@ void PipeLine::idump(FILE * dumpsim_file)
 }
 
 /*
-* return the state of the branch logic unit
+* 
+*/
+bool PipeLine::IsControlInstruction()
+{ 
+  //TODO: finish the implementation
+  return 1;
+}
+
+/*
+* 
+*/
+bool PipeLine::IsOperateInstruction() 
+{ 
+  //TODO: finish the implementation
+  return 1;
+}
+
+/*
+* 
+*/
+bool PipeLine::IsMemoryMoveInstruction() 
+{ 
+  //TODO: finish the implementation
+  return 1;
+}
+
+/*
+* return the state of the
 */
 bool PipeLine::IsBranchTaken() 
 { 
@@ -254,8 +283,10 @@ void PipeLine::PropagatePipeLine()
 /************************* SR_stage() *************************/
 void PipeLine::SR_stage() 
 {  
-  MicroSequencer & micro_sequencer =  simulator().microsequencer();
-  SR_Stage_Entry & sr_stage = simulator().state().SrStage();
+  SetStage(STORE);
+
+  auto & micro_sequencer =  simulator().microsequencer();
+  auto & sr_stage = simulator().state().SrStage();
   /* You are given the code for SR_stage to get you started. Look at
      the figure for SR stage to see how this code is implemented. */
   
@@ -289,6 +320,8 @@ void PipeLine::SR_stage()
 /************************* MEM_stage() *************************/
 void PipeLine::MEM_stage() 
 {
+  SetStage(MEMORY);
+
   uint16_t ii,jj = 0;
   
   /* your code for MEM stage goes here */
@@ -310,6 +343,8 @@ void PipeLine::MEM_stage()
 /************************* AGEX_stage() *************************/
 void PipeLine::AGEX_stage() 
 {
+  SetStage(AGEX);
+
   uint16_t ii, jj = 0;
   uint16_t LD_MEM; /* You need to write code to compute the value of LD.MEM
 		 signal */
@@ -338,7 +373,9 @@ void PipeLine::AGEX_stage()
 /************************* DE_stage() *************************/
 void PipeLine::DE_stage() 
 {
-  MicroSequencer & micro_sequencer = simulator().microsequencer();
+  SetStage(DECODE);
+
+  auto & micro_sequencer = simulator().microsequencer();
   bitfield<6> CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
 			                                set the value of this variable. Look
 			                                at the figure for DE stage */ 
@@ -350,7 +387,7 @@ void PipeLine::DE_stage()
   CONTROL_STORE_ADDRESS.range<5,1>() = PS.DE_IR.range<15,11>();
   CONTROL_STORE_ADDRESS[0] = PS.DE_IR[5];
 
-  
+  auto u_code = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
 
 
 
@@ -372,10 +409,10 @@ void PipeLine::DE_stage()
     NEW_PS.MEM_CC = 0;   //TODO
 
     /*AGEX CS bits*/
-    NEW_PS.AGEX_CS = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num()).range<22,3>();
+    NEW_PS.AGEX_CS = u_code.range<22,3>();
 
     /*AGEX DRID*/
-    if(micro_sequencer.Get_DRMUX(micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num())))
+    if(micro_sequencer.Get_DRMUX(u_code))
       NEW_PS.AGEX_DRID = 0x7;
     else
       NEW_PS.AGEX_DRID = PS.DE_IR.range<11,9>();
@@ -388,11 +425,13 @@ void PipeLine::DE_stage()
 /************************* FETCH_stage() *************************/
 void PipeLine::FETCH_stage() 
 {
+  SetStage(FETCH);
+
   /* your code for FETCH stage goes here */
-  State & cpu_state = simulator().state();
-  MEM_Stage_Entry & mem_stage = simulator().state().MemStage();
-  Stall_Entry & stall = simulator().state().Stall();
-  MainMemory & memory = simulator().memory();
+  auto & cpu_state = simulator().state();
+  auto & mem_stage = simulator().state().MemStage();
+  auto & stall = simulator().state().Stall();
+  auto & memory = simulator().memory();
   bits16 new_pc, instruction;
 
   //get the instruction from the instruction cache and the ready bit

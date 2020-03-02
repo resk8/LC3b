@@ -62,6 +62,8 @@ class PipeLine
   /* These are the functions you'll have to write.               */
   /***************************************************************/
   void init_pipeline();
+  void SetStage(Stages stage) { current_stage = stage; }
+  
   void FETCH_stage();
   void DE_stage();
   void AGEX_stage();
@@ -70,10 +72,15 @@ class PipeLine
   void PropagatePipeLine();
   bool IsStallDetected();
   bool IsBranchTaken();
+  bool IsControlInstruction();
+  bool IsOperateInstruction();
+  bool IsMemoryMoveInstruction();
 
   private:
   Simulator & _simulator;
 
   /* data structure for latch */
   PipeState_Entry PS, NEW_PS;
+
+  Stages current_stage;
 };
