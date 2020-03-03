@@ -9,14 +9,31 @@
     #include "../include/State.h"
     #include "../include/MicroSequencer.h"
     #include "../include/MainMemory.h"
+    #include "../include/Latch.h"
     #include "../include/PipeLine.h"
 #else
     #include "Simulator.h"
     #include "State.h"
     #include "MicroSequencer.h"
     #include "MainMemory.h"
+    #include "Latch.h"
     #include "PipeLine.h"
 #endif
+
+/*
+*
+*/
+PipeLine::PipeLine(Simulator & instance) : _simulator(instance) 
+{
+  PS = PipeLatches(NUM_OF_STAGES);
+  NEW_PS = PipeLatches(NUM_OF_STAGES);
+
+  for(auto i = 0; i < NUM_OF_STAGES; i++)
+  {
+    PS.at(i) = std::make_shared<Latch>(*this);
+    NEW_PS.at(i) = std::make_shared<Latch>(*this);
+  }
+}
 
 /***************************************************************/
 /*                                                             */
@@ -27,13 +44,6 @@
 /***************************************************************/
 void PipeLine::init_pipeline()
 {
-  std::memset(&PS, 0 ,sizeof(PipeState_Entry)); 
-  std::memset(&NEW_PS, 0 , sizeof(PipeState_Entry));
-
-  PS.AGEX_CS = NEW_PS.AGEX_CS = agex_cs_bits();
-  PS.MEM_CS = NEW_PS.MEM_CS = mem_cs_bits();
-  PS.SR_CS = NEW_PS.SR_CS = sr_cs_bits();
-
   SetStage(UNDEFINED);
 }
 
@@ -215,6 +225,17 @@ void PipeLine::idump(FILE * dumpsim_file)
 /*
 * 
 */
+void PipeLine::SetLatchState(PipeLatches & latch1,PipeLatches & latch2)
+{
+  for(auto i = 0; i < NUM_OF_STAGES; i++)
+  {
+    latch1.at(i) = latch2.at(i);
+  }
+}
+
+/*
+* 
+*/
 bool PipeLine::IsControlInstruction()
 { 
   //TODO: finish the implementation
@@ -271,13 +292,13 @@ bool PipeLine::IsStallDetected()
 */
 void PipeLine::PropagatePipeLine()
 {
-  NEW_PS = PS; 
+  SetLatchState(NEW_PS,PS);
   SR_stage();
   MEM_stage(); 
   AGEX_stage();
   DE_stage();
   FETCH_stage();
-  PS = NEW_PS; 
+  SetLatchState(PS,NEW_PS);
 }
 
 /************************* SR_stage() *************************/

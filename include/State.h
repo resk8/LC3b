@@ -78,9 +78,9 @@ class State
   /* architectural state                                         */
   /***************************************************************/
   bits16 PC; /* program counter */
-  bool N,	/* n condition bit */
-       Z,  /* z condition bit */
-       P;	/* p condition bit */
+  bool N,	   /* n condition bit */
+       Z,    /* z condition bit */
+       P;	   /* p condition bit */
 
   MEM_Stage_Entry MEM;
   SR_Stage_Entry SR;
