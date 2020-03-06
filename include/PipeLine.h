@@ -8,10 +8,10 @@
     #include "LC3b.h"
 #endif
 
+class Latch;
 typedef std::vector<std::shared_ptr<Latch>> PipeLatches;
 
 class Simulator;
-class Latch;
 class PipeLine
 {
   public:
@@ -40,6 +40,7 @@ class PipeLine
   bool IsControlInstruction();
   bool IsOperateInstruction();
   bool IsMemoryMoveInstruction();
+  Latch & GetLatch(Stages stage, PipeLatches & latch); 
 
   private:
   Simulator & _simulator;

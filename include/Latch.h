@@ -5,10 +5,6 @@
     #include "LC3b.h"
 #endif
 
-#define COPY_AGEX_CS_START 3 
-#define COPY_MEM_CS_START  9
-#define COPY_SR_CS_START   7
-
 class PipeLine;
 class Latch
 {
@@ -16,12 +12,10 @@ class Latch
     Latch(PipeLine & instance);
     ~Latch(){}
 
-    PipeLine & pipeline() { return _pipe; }
+    PipeLine & pipeline() { return _pipe; }    
     void operator=(const Latch & latch);
 
-    private:
-    PipeLine & _pipe;
-
+    //TODO: make some getters?
     bits16  NPC,
             DATA,
             SR1,
@@ -33,4 +27,7 @@ class Latch
             CC;
     bool    V;
     cs_bits CS;
+
+    private:
+    PipeLine & _pipe;
 };

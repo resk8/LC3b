@@ -104,13 +104,14 @@ enum SR_CS_BITS {
   NUM_SR_CS_BITS
 };
 
-enum Stages {
-  FETCH,
+enum Stages {  
   DECODE,
   AGEX,
   MEMORY,
   STORE,
-  NUM_OF_STAGES,
+  NUM_OF_LATCHES,
+  //no latch for bottom stages
+  FETCH,
   UNDEFINED
 };
 
