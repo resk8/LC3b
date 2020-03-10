@@ -36,7 +36,7 @@ void MainMemory::init_memory()
 }
 
 /*
-*
+* //TODO
 */
 bits8 MainMemory::GetLowerByteAt(bits16 address) const
 {
@@ -54,7 +54,7 @@ bits8 MainMemory::GetLowerByteAt(bits16 address) const
 }
 
 /*
-*
+* //TODO
 */
 void MainMemory::SetLowerByteAt(bits16 address, bits8 val)
 {
@@ -72,7 +72,7 @@ void MainMemory::SetLowerByteAt(bits16 address, bits8 val)
 }
 
 /*
-*
+* //TODO
 */
 bits8 MainMemory::GetUpperByteAt(bits16 address) const
 {
@@ -90,7 +90,7 @@ bits8 MainMemory::GetUpperByteAt(bits16 address) const
 }
 
 /*
-*
+* //TODO
 */
 void MainMemory::SetUpperByteAt(bits16 address, bits8 val)
 {

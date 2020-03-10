@@ -19,7 +19,7 @@ class PipeLine
   ~PipeLine(){}
 
   Simulator & simulator() { return _simulator; }
-  Latch & latch(Stages latch); // { return *PipeLatch; }
+  Latch & latch(Stages latch);
 
   void idump(FILE * dumpsim_file);
 
@@ -34,13 +34,13 @@ class PipeLine
   void MEM_stage();
   void SR_stage();
   void PropagatePipeLine();
-  void MoveLatch(PipeLatches & latch1, PipeLatches & latch2);
+  void MoveLatch(const PipeLatches & destination, const PipeLatches & source);
   bool IsStallDetected();
   bool IsBranchTaken();
   bool IsControlInstruction();
   bool IsOperateInstruction();
   bool IsMemoryMoveInstruction();
-  Latch & GetLatch(Stages stage, PipeLatches & latch); 
+  Latch & GetLatch(Stages stage, const PipeLatches & latch); 
 
   private:
   Simulator & _simulator;

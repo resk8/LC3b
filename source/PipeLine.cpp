@@ -21,7 +21,7 @@
 #endif
 
 /*
-*
+* //TODO
 */
 PipeLine::PipeLine(Simulator & instance) : _simulator(instance) 
 {
@@ -227,20 +227,20 @@ void PipeLine::idump(FILE * dumpsim_file)
 }
 
 /*
-* 
+* //TODO
 */
-void PipeLine::MoveLatch(PipeLatches & latch1,PipeLatches & latch2)
+void PipeLine::MoveLatch(const PipeLatches & destination, const PipeLatches & source)
 {
   for(auto i = 0; i < NUM_OF_LATCHES; i++)
   {
-    *latch1.at(i) = *latch2.at(i);
+    *destination.at(i) = *source.at(i);
   }
 }
 
 /*
-* 
+* //TODO
 */
-Latch & PipeLine::GetLatch(Stages stage, PipeLatches & latch)
+Latch & PipeLine::GetLatch(Stages stage, const PipeLatches & latch)
 {
   switch (stage)
   {
@@ -263,7 +263,7 @@ Latch & PipeLine::GetLatch(Stages stage, PipeLatches & latch)
 }
 
 /*
-* 
+* //TODO
 */
 bool PipeLine::IsControlInstruction()
 { 
@@ -272,7 +272,7 @@ bool PipeLine::IsControlInstruction()
 }
 
 /*
-* 
+* //TODO
 */
 bool PipeLine::IsOperateInstruction() 
 { 
@@ -281,7 +281,7 @@ bool PipeLine::IsOperateInstruction()
 }
 
 /*
-* 
+* //TODO
 */
 bool PipeLine::IsMemoryMoveInstruction() 
 { 
@@ -334,7 +334,6 @@ void PipeLine::PropagatePipeLine()
 void PipeLine::SR_stage() 
 {  
   SetStage(STORE);
-
   auto & micro_sequencer =  simulator().microsequencer();
   auto & sr_stage = simulator().state().SrStage();
   auto & SR = GetLatch(STORE,PS);
@@ -473,9 +472,7 @@ void PipeLine::DE_stage()
 /************************* FETCH_stage() *************************/
 void PipeLine::FETCH_stage() 
 {
-  SetStage(FETCH);
-
-  /* your code for FETCH stage goes here */
+  SetStage(FETCH);  
   auto & cpu_state = simulator().state();
   auto & mem_stage = simulator().state().MemStage();
   auto & stall = simulator().state().Stall();

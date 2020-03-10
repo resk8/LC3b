@@ -10,7 +10,7 @@
 #endif
 
 /*
-*
+* //TODO
 */
 MicroSequencer::MicroSequencer(Simulator & intance) : _simulator(intance) 
 {
@@ -80,7 +80,7 @@ void MicroSequencer::init_control_store(char *ucode_filename)
 }
 
 /*
-*
+* //TODO
 */
 cs_bits & MicroSequencer::GetMicroCodeAt(uint8_t row)
 {
@@ -98,7 +98,7 @@ cs_bits & MicroSequencer::GetMicroCodeAt(uint8_t row)
 }
 
 /*
-*
+* //TODO
 */
 bool MicroSequencer::GetMicroCodeBitsAt(uint8_t index, uint8_t bits) const
 {
@@ -116,7 +116,7 @@ bool MicroSequencer::GetMicroCodeBitsAt(uint8_t index, uint8_t bits) const
 }
 
 /*
-*
+* //TODO
 */
 void MicroSequencer::SetMicroCodeBitsAt(uint8_t index, uint8_t bit, bool val)
 {
@@ -134,9 +134,9 @@ void MicroSequencer::SetMicroCodeBitsAt(uint8_t index, uint8_t bit, bool val)
 }
 
 /*
-*
+* //TODO
 */
-void MicroSequencer::print_CS(cs_bits &CS, int num) const
+void MicroSequencer::print_CS(const cs_bits &CS, int num) const
 {
   for ( auto ii = 0 ; ii < num; ii++) {
     printf("%d",CS[ii]);

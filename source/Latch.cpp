@@ -13,7 +13,7 @@
 #endif
 
 /*
-*
+* //TODO
 */
 Latch::Latch(PipeLine & instance) : 
 _pipe(instance),
@@ -33,7 +33,7 @@ CS(cs_bits())
 }
 
 /*
-*
+* //TODO
 */
 void Latch::operator=(const Latch & latch)
 {

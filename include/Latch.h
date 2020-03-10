@@ -13,7 +13,7 @@ class Latch
     ~Latch(){}
 
     PipeLine & pipeline() { return _pipe; }    
-    void operator=(const Latch & latch);
+    void operator=(const Latch & latch);    
 
     //TODO: make some getters?
     bits16  NPC,
