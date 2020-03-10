@@ -34,7 +34,7 @@ class PipeLine
   void MEM_stage();
   void SR_stage();
   void PropagatePipeLine();
-  void SetLatchState(PipeLatches & latch1, PipeLatches & latch2);
+  void MoveLatch(PipeLatches & latch1, PipeLatches & latch2);
   bool IsStallDetected();
   bool IsBranchTaken();
   bool IsControlInstruction();

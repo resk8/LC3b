@@ -229,18 +229,18 @@ void PipeLine::idump(FILE * dumpsim_file)
 /*
 * 
 */
-void PipeLine::SetLatchState(PipeLatches & latch1,PipeLatches & latch2)
+void PipeLine::MoveLatch(PipeLatches & latch1,PipeLatches & latch2)
 {
   for(auto i = 0; i < NUM_OF_LATCHES; i++)
   {
-    latch1.at(i) = latch2.at(i);
+    *latch1.at(i) = *latch2.at(i);
   }
 }
 
 /*
 * 
 */
-Latch & GetLatch(Stages stage, PipeLatches & latch)
+Latch & PipeLine::GetLatch(Stages stage, PipeLatches & latch)
 {
   switch (stage)
   {
@@ -321,13 +321,13 @@ bool PipeLine::IsStallDetected()
 */
 void PipeLine::PropagatePipeLine()
 {
-  SetLatchState(NEW_PS,PS);
+  MoveLatch(NEW_PS,PS);
   SR_stage();
   MEM_stage(); 
   AGEX_stage();
   DE_stage();
   FETCH_stage();
-  SetLatchState(PS,NEW_PS);
+  MoveLatch(PS,NEW_PS);
 }
 
 /************************* SR_stage() *************************/
