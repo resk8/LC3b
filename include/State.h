@@ -57,11 +57,13 @@ class State
   void init_state();
   void SetProgramCounter(bits16 val) { PC = val; }
   bits16 GetProgramCounter() const {return PC; }
-  bool GetNBit() const { return N; }
-  bool GetPBit() const { return P; }
-  bool GetZBit() const { return Z; }
-  bits16 GetRegister(uint8_t reg) const;
+  bool GetNBit(Stages stage) const;
+  bool GetPBit(Stages stage) const;
+  bool GetZBit(Stages stage) const;
+  void SetDataForRegister(bits3 reg,bits16 data);
+  bits16 GetRegisterData(bits3 reg) const;
   void rdump(FILE * dumpsim_file);
+  std::vector<bits16> ProcessRegisterFile(bits3 sr1, bits3 sr2);
 
   Stall_Entry & Stall() { return STALL; }
   SR_Stage_Entry & SrStage() {return SR; }

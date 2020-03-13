@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <assert.h>
 #ifdef __linux__
     #include "../include/Simulator.h"
     #include "../include/State.h"
@@ -63,11 +64,11 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("-------------------------------------\n");
   printf("Cycle Count     : %d\n", simulator().GetCycles());
   printf("CpuState.GetProgramCounter()              : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
-  printf("CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
+  printf("CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(UNDEFINED), cpu_state.GetZBit(UNDEFINED), cpu_state.GetPBit(UNDEFINED));
   printf("Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
-	  printf("%d: 0x%04x\n", k, cpu_state.GetRegister(k).to_num());
+	  printf("%d: 0x%04x\n", k, cpu_state.GetRegisterData(k).to_num());
   }
   
   printf("\n");
@@ -81,14 +82,14 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("V_MEM_BR_STALL  :  %d\n", cpu_state.Stall().v_mem_br_stall);    
   printf("\n");
 
-  auto & decode = GetLatch(DECODE,PS);
+  auto & decode = latch(DECODE,PS);
   printf("------------- DE   Latches --------------\n");
   printf("DE_NPC          :  0x%04x\n", decode.NPC.to_num() );
   printf("DE_IR           :  0x%04x\n", decode.IR.to_num() );
   printf("DE_V            :  %d\n", decode.V);
   printf("\n");
   
-  auto & agex = GetLatch(DECODE,PS);
+  auto & agex = latch(DECODE,PS);
   printf("------------- AGEX Latches --------------\n");
   printf("AGEX_NPC        :  0x%04x\n", agex.NPC.to_num() );
   printf("AGEX_SR1        :  0x%04x\n", agex.SR1.to_num() );
@@ -106,7 +107,7 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("AGEX_V          :  %d\n", agex.V);  
   printf("\n");
 
-  auto & memory = GetLatch(MEMORY,PS);
+  auto & memory = latch(MEMORY,PS);
   printf("------------- MEM  Latches --------------\n");
   printf("MEM_NPC         :  0x%04x\n", memory.NPC.to_num() );
   printf("MEM_ALU_RESULT  :  0x%04x\n", memory.ALU_RESULT.to_num() );
@@ -124,7 +125,7 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("MEM_V           :  %d\n", memory.V);
   printf("\n");
 
-  auto & store = GetLatch(STORE,PS);
+  auto & store = latch(STORE,PS);
   printf("------------- SR   Latches --------------\n");
   printf("SR_NPC          :  0x%04x\n", store.NPC.to_num() );
   printf("SR_DATA         :  0x%04x\n", store.DATA.to_num() );
@@ -148,11 +149,11 @@ void PipeLine::idump(FILE * dumpsim_file)
   fprintf(dumpsim_file,"-------------------------------------\n");
   fprintf(dumpsim_file,"Cycle Count     : %d\n", simulator().GetCycles());
   fprintf(dumpsim_file,"CpuState.GetProgramCounter()              : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
-  fprintf(dumpsim_file,"CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
+  fprintf(dumpsim_file,"CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(UNDEFINED), cpu_state.GetZBit(UNDEFINED), cpu_state.GetPBit(UNDEFINED));
   fprintf(dumpsim_file,"Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
-    fprintf(dumpsim_file,"%d: 0x%04x\n", k, cpu_state.GetRegister(k).to_num());
+    fprintf(dumpsim_file,"%d: 0x%04x\n", k, cpu_state.GetRegisterData(k).to_num());
   }
   
   fprintf(dumpsim_file,"\n");
@@ -240,7 +241,7 @@ void PipeLine::MoveLatch(const PipeLatches & destination, const PipeLatches & so
 /*
 * //TODO
 */
-Latch & PipeLine::GetLatch(Stages stage, const PipeLatches & latch)
+Latch & PipeLine::latch(Stages stage, const PipeLatches & latch)
 {
   switch (stage)
   {
@@ -257,7 +258,7 @@ Latch & PipeLine::GetLatch(Stages stage, const PipeLatches & latch)
     return *latch.at(3);
     break;
   default:
-    static_assert(1); //TODO: proper error handling (should not happen)
+    assert(1); //TODO: proper error handling (should not happen)
     break;
   }
 }
@@ -336,7 +337,7 @@ void PipeLine::SR_stage()
   SetStage(STORE);
   auto & micro_sequencer =  simulator().microsequencer();
   auto & sr_stage = simulator().state().SrStage();
-  auto & SR = GetLatch(STORE,PS);
+  auto & SR = latch(STORE,PS);
   /* You are given the code for SR_stage to get you started. Look at
      the figure for SR stage to see how this code is implemented. */
   
@@ -371,8 +372,8 @@ void PipeLine::SR_stage()
 void PipeLine::MEM_stage() 
 {
   SetStage(MEMORY);
-  auto & SR = GetLatch(STORE,NEW_PS);
-  auto & MEM = GetLatch(MEMORY,PS);
+  auto & SR = latch(STORE,NEW_PS);
+  auto & MEM = latch(MEMORY,PS);
   
   /* your code for MEM stage goes here */
 
@@ -392,8 +393,8 @@ void PipeLine::MEM_stage()
 void PipeLine::AGEX_stage() 
 {
   SetStage(AGEX);
-  auto & MEM = GetLatch(STORE,NEW_PS);
-  auto & AGEX = GetLatch(MEMORY,PS);
+  auto & MEM = latch(STORE,NEW_PS);
+  auto & AGEX = latch(MEMORY,PS);
 
   uint16_t LD_MEM; /* You need to write code to compute the value of LD.MEM
 		 signal */
@@ -420,22 +421,26 @@ void PipeLine::AGEX_stage()
 void PipeLine::DE_stage() 
 {
   SetStage(DECODE);
+  auto & cpu_state = simulator().state();
   auto & micro_sequencer = simulator().microsequencer();
-  auto & AGEX = GetLatch(STORE,NEW_PS);
-  auto & DE = GetLatch(MEMORY,PS);
-  bitfield<6> CONTROL_STORE_ADDRESS;  /* You need to implement the logic to
-			                                set the value of this variable. Look
-			                                at the figure for DE stage */ 
-                                      
-  bool LD_AGEX; /* You need to write code to compute the value of
-		              LD.AGEX signal */
+  auto & DE = latch(MEMORY,PS);
+  auto & AGEX = latch(STORE,NEW_PS);
+  auto CONTROL_STORE_ADDRESS = bitfield<6>(0);
+  auto LD_AGEX = false;
 
   /* your code for DE stage goes here */
   CONTROL_STORE_ADDRESS.range<5,1>() = DE.IR.range<15,11>();
   CONTROL_STORE_ADDRESS[0] = DE.IR[5];
-
   auto u_code = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
 
+  //Process the register file
+  auto sr1 = bits3(DE.IR.range<8,6>());
+  auto sr2 = bits3(0);
+  if(DE.IR[13] /*SR2.IDMUX*/) 
+    sr2 = DE.IR.range<11,9>();
+  else
+    sr2 = DE.IR.range<2,0>();
+  auto source_reg_data = cpu_state.ProcessRegisterFile(sr1,sr2);
 
 
   if (LD_AGEX)
@@ -447,13 +452,15 @@ void PipeLine::DE_stage()
     AGEX.IR = DE.IR;
 
     /*AGEX SR1 needed*/
-    AGEX.SR1 = 0; //TODO
+    AGEX.SR1 = source_reg_data.at(0);
 
     /*AGEX SR2 needed*/
-    AGEX.SR2 = 0; //TODO
+    AGEX.SR2 = source_reg_data.at(1);
 
     /*AGEX CS*/
-    AGEX.CC = 0;   //TODO
+    AGEX.CC[0] = cpu_state.GetPBit((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
+    AGEX.CC[1] = cpu_state.GetZBit((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
+    AGEX.CC[2] = cpu_state.GetNBit((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
 
     /*AGEX CS bits*/
     AGEX.CS.range<19,0>() = u_code.range<22,3>();
@@ -477,7 +484,7 @@ void PipeLine::FETCH_stage()
   auto & mem_stage = simulator().state().MemStage();
   auto & stall = simulator().state().Stall();
   auto & memory = simulator().memory();
-  auto & DE = GetLatch(DECODE,NEW_PS);
+  auto & DE = latch(DECODE,NEW_PS);
   bits16 new_pc, instruction;
 
   //get the instruction from the instruction cache and the ready bit

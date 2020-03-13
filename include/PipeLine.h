@@ -19,7 +19,7 @@ class PipeLine
   ~PipeLine(){}
 
   Simulator & simulator() { return _simulator; }
-  Latch & latch(Stages latch);
+  Latch & latch(Stages stage, const PipeLatches & latch);
 
   void idump(FILE * dumpsim_file);
 
@@ -40,7 +40,6 @@ class PipeLine
   bool IsControlInstruction();
   bool IsOperateInstruction();
   bool IsMemoryMoveInstruction();
-  Latch & GetLatch(Stages stage, const PipeLatches & latch); 
 
   private:
   Simulator & _simulator;
