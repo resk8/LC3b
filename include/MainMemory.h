@@ -20,13 +20,13 @@ class MainMemory
   Simulator & simulator() { return _simulator; }
 
   void init_memory();
-  bits8 GetLowerByteAt(bits16 address) const;
-  void SetLowerByteAt(bits16 address, bits8 val);
-  bits8 GetUpperByteAt(bits16 address) const;
-  void SetUpperByteAt(bits16 address, bits8 val);
-  void dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 write_word, bool & dcache_r, bool mem_w0, bool mem_w1);
-  void icache_access(bits16 icache_addr, bits16 & read_word, bool & icache_r);
-  void mdump(FILE * dumpsim_file, bits16 start, bits16 stop);
+  bits8 GetLowerByteAt(const bits16 & address) const;
+  void SetLowerByteAt(const bits16 & address, bits8 val);
+  bits8 GetUpperByteAt(const bits16 & address) const;
+  void SetUpperByteAt(const bits16 & address, bits8 val);
+  void dcache_access(const bits16 & dcache_addr, bits16 & read_word, const bits16 & write_word, bool & dcache_r, bool mem_w0, bool mem_w1);
+  void icache_access(const bits16 & icache_addr, bits16 & read_word, bool & icache_r);
+  void mdump(FILE * dumpsim_file, const bits16 & start, const bits16 & stop);
 
   private:
   Simulator & _simulator;

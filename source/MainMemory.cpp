@@ -38,7 +38,7 @@ void MainMemory::init_memory()
 /*
 * //TODO
 */
-bits8 MainMemory::GetLowerByteAt(bits16 address) const
+bits8 MainMemory::GetLowerByteAt(const bits16 & address) const
 {
   try
   {
@@ -56,7 +56,7 @@ bits8 MainMemory::GetLowerByteAt(bits16 address) const
 /*
 * //TODO
 */
-void MainMemory::SetLowerByteAt(bits16 address, bits8 val)
+void MainMemory::SetLowerByteAt(const bits16 & address, bits8 val)
 {
   try
   {
@@ -74,7 +74,7 @@ void MainMemory::SetLowerByteAt(bits16 address, bits8 val)
 /*
 * //TODO
 */
-bits8 MainMemory::GetUpperByteAt(bits16 address) const
+bits8 MainMemory::GetUpperByteAt(const bits16 & address) const
 {
   try
   {
@@ -92,7 +92,7 @@ bits8 MainMemory::GetUpperByteAt(bits16 address) const
 /*
 * //TODO
 */
-void MainMemory::SetUpperByteAt(bits16 address, bits8 val)
+void MainMemory::SetUpperByteAt(const bits16 & address, bits8 val)
 {
   try
   {
@@ -112,7 +112,7 @@ void MainMemory::SetUpperByteAt(bits16 address, bits8 val)
 /* dcache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 write_word, bool  & dcache_r, bool mem_w0, bool mem_w1) 
+void MainMemory::dcache_access(const bits16 & dcache_addr, bits16 & read_word, const bits16 & write_word, bool  & dcache_r, bool mem_w0, bool mem_w1) 
 {  
   auto addr = dcache_addr >> 1; 
   auto random = simulator().GetCycles() % 9;
@@ -138,7 +138,7 @@ void MainMemory::dcache_access(bits16 dcache_addr, bits16 & read_word, bits16 wr
 /* icache_access                                               */
 /*                                                             */
 /***************************************************************/
-void MainMemory::icache_access(bits16 icache_addr, bits16 & read_word, bool & icache_r) 
+void MainMemory::icache_access(const bits16 & icache_addr, bits16 & read_word, bool & icache_r) 
 {	
   auto addr = icache_addr >> 1; 
   auto random = simulator().GetCycles() % 13;
@@ -163,7 +163,7 @@ void MainMemory::icache_access(bits16 icache_addr, bits16 & read_word, bool & ic
 /* Purpose   : Dump a region of memory to the output file.     */
 /*                                                             */
 /***************************************************************/
-void MainMemory::mdump(FILE * dumpsim_file, bits16 start, bits16 stop)
+void MainMemory::mdump(FILE * dumpsim_file, const bits16  & start, const bits16 & stop)
 {
   uint16_t address; /* this is a byte address */
 

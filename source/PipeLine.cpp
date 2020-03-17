@@ -336,7 +336,7 @@ void PipeLine::SR_stage()
 {  
   SetStage(STORE);
   auto & micro_sequencer =  simulator().microsequencer();
-  auto & sr_stage = simulator().state().SrStage();
+  auto & sr_sig = simulator().state().SrStage();
   auto & SR = latch(STORE,PS);
   /* You are given the code for SR_stage to get you started. Look at
      the figure for SR stage to see how this code is implemented. */
@@ -344,27 +344,27 @@ void PipeLine::SR_stage()
   switch (micro_sequencer.Get_DR_VALUEMUX1(SR.CS).to_num())
   {
   case 0: 
-    sr_stage.sr_reg_data = SR.ADDRESS ;
+    sr_sig.sr_reg_data = SR.ADDRESS ;
     break;
   case 1:
-    sr_stage.sr_reg_data = SR.DATA ;
+    sr_sig.sr_reg_data = SR.DATA ;
     break;
   case 2:
-    sr_stage.sr_reg_data = SR.NPC ;
+    sr_sig.sr_reg_data = SR.NPC ;
     break;
   case 3:
-    sr_stage.sr_reg_data = SR.ALU_RESULT ;
+    sr_sig.sr_reg_data = SR.ALU_RESULT ;
     break;
   }
 
-  sr_stage.sr_reg_id = SR.DRID; 
-  sr_stage.v_sr_ld_reg = micro_sequencer.Get_SR_LD_REG(SR.CS) & SR.V;
-  sr_stage.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(SR.CS) & SR.V ;
+  sr_sig.sr_reg_id = SR.DRID; 
+  sr_sig.v_sr_ld_reg = micro_sequencer.Get_SR_LD_REG(SR.CS) & SR.V;
+  sr_sig.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(SR.CS) & SR.V ;
 
   /* CC LOGIC  */
-  sr_stage.sr_n = sr_stage.sr_reg_data[15];
-  sr_stage.sr_z = ((sr_stage.sr_reg_data.to_num() & 0xFFFF) ? 0 : 1);
-  sr_stage.sr_p = ((!sr_stage.sr_n) && (!sr_stage.sr_z));
+  sr_sig.sr_n = sr_sig.sr_reg_data[15];
+  sr_sig.sr_z = ((sr_sig.sr_reg_data.to_num() & 0xFFFF) ? 0 : 1);
+  sr_sig.sr_p = ((!sr_sig.sr_n) && (!sr_sig.sr_z));
 }
 
 
@@ -396,8 +396,7 @@ void PipeLine::AGEX_stage()
   auto & MEM = latch(STORE,NEW_PS);
   auto & AGEX = latch(MEMORY,PS);
 
-  uint16_t LD_MEM; /* You need to write code to compute the value of LD.MEM
-		 signal */
+  uint16_t LD_MEM; /* You need to write code to compute the value of LD.MEM signal */
 
   /* your code for AGEX stage goes here */
 
@@ -421,26 +420,23 @@ void PipeLine::AGEX_stage()
 void PipeLine::DE_stage() 
 {
   SetStage(DECODE);
-  auto & cpu_state = simulator().state();
+  auto & cpu_state = simulator().state(); 
+  auto & de_sig = simulator().state().DecodeStage();
   auto & micro_sequencer = simulator().microsequencer();
   auto & DE = latch(MEMORY,PS);
   auto & AGEX = latch(STORE,NEW_PS);
   auto CONTROL_STORE_ADDRESS = bitfield<6>(0);
   auto LD_AGEX = false;
 
-  /* your code for DE stage goes here */
+  //get micro code state
   CONTROL_STORE_ADDRESS.range<5,1>() = DE.IR.range<15,11>();
   CONTROL_STORE_ADDRESS[0] = DE.IR[5];
-  auto u_code = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
+  de_sig.de_ucode = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
 
   //Process the register file
-  auto sr1 = bits3(DE.IR.range<8,6>());
-  auto sr2 = bits3(0);
-  if(DE.IR[13] /*SR2.IDMUX*/) 
-    sr2 = DE.IR.range<11,9>();
-  else
-    sr2 = DE.IR.range<2,0>();
-  auto source_reg_data = cpu_state.ProcessRegisterFile(sr1,sr2);
+  cpu_state.ProcessRegisterFile(DE.IR);
+   
+  //Dependency check logic
 
 
   if (LD_AGEX)
@@ -452,21 +448,19 @@ void PipeLine::DE_stage()
     AGEX.IR = DE.IR;
 
     /*AGEX SR1 needed*/
-    AGEX.SR1 = source_reg_data.at(0);
+    AGEX.SR1 = de_sig.de_sr1;
 
     /*AGEX SR2 needed*/
-    AGEX.SR2 = source_reg_data.at(1);
+    AGEX.SR2 = de_sig.de_sr2;
 
     /*AGEX CS*/
-    AGEX.CC[0] = cpu_state.GetPBit((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
-    AGEX.CC[1] = cpu_state.GetZBit((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
-    AGEX.CC[2] = cpu_state.GetNBit((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
+    AGEX.CC = cpu_state.GetNZP((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
 
     /*AGEX CS bits*/
-    AGEX.CS.range<19,0>() = u_code.range<22,3>();
+    AGEX.CS.range<19,0>() = de_sig.de_ucode.range<22,3>();
 
     /*AGEX DRID*/
-    if(micro_sequencer.Get_DRMUX(u_code))
+    if(micro_sequencer.Get_DRMUX(de_sig.de_ucode))
       AGEX.DRID = 0x7;
     else
       AGEX.DRID = DE.IR.range<11,9>();

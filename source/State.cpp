@@ -26,9 +26,22 @@ void State::init_state()
   Z = 1;
   REGS = std::vector<bits16>(LC3b_REGS);
 
+  std::memset(&DE, 0, sizeof(PipeState_DE_stage_Struct));
   std::memset(&MEM, 0, sizeof(PipeState_MEM_stage_Struct));
   std::memset(&SR, 0,sizeof(PipeState_SR_stage_Struct));
   std::memset(&STALL, 0, sizeof(PipeState_Hazards_Struct));
+}
+
+/*
+* //TODO
+*/
+bits3 State::GetNZP(Stages stage) const
+{
+  auto nzp = bits3(0);
+  nzp[2] = GetNBit(stage);
+  nzp[1] = GetZBit(stage);
+  nzp[0] = GetPBit(stage);
+  return nzp;
 }
 
 /*
@@ -82,7 +95,7 @@ bool State::GetZBit(Stages stage) const
 /*
 * Move the data into the requested register
 */
-void State::SetDataForRegister(bits3 reg,bits16 data)
+void State::SetDataForRegister(const bits3 & reg, const bits16 & data)
 {
   try
   {
@@ -100,7 +113,7 @@ void State::SetDataForRegister(bits3 reg,bits16 data)
 /*
 * return the value of the requested register
 */
-bits16 State::GetRegisterData(bits3 reg) const
+bits16 State::GetRegisterData(const bits3 & reg) const
 {
   try
   {
@@ -118,17 +131,22 @@ bits16 State::GetRegisterData(bits3 reg) const
 /*
 * Loads new data into destination register and return data from reg sr1 and sr2
 */
-std::vector<bits16> State::ProcessRegisterFile(bits3 sr1, bits3 sr2)
+void State::ProcessRegisterFile(const bits16 & de_instruction)
 {
-  std::vector<bits16> register_data;
-  register_data.push_back(GetRegisterData(sr1));
-  register_data.push_back(GetRegisterData(sr2));
+  auto sr1 = de_instruction.range<8,6>();
+  auto sr2 = bits3(0);
+  if(de_instruction[13] /*SR2.IDMUX*/) 
+    sr2 = de_instruction.range<11,9>();
+  else
+    sr2 = de_instruction.range<2,0>();
+
+  DE.de_sr1 = GetRegisterData(sr1);
+  DE.de_sr2 = GetRegisterData(sr2);
 
   if(SR.v_sr_ld_reg)
   {
     SetDataForRegister(SR.sr_reg_id, SR.sr_reg_data);
   }
-  return register_data;
 }
 
 /***************************************************************/
