@@ -33,63 +33,23 @@ void State::init_state()
 }
 
 /*
-* //TODO
+* Return the current N Z P bits and loads a new nzp value from SR stage into N Z P
 */
-bits3 State::GetNZP(Stages stage) const
+bits3 State::GetNZP(bool load_new_nzp)
 {
   auto nzp = bits3(0);
-  nzp[2] = GetNBit(stage);
-  nzp[1] = GetZBit(stage);
-  nzp[0] = GetPBit(stage);
+  nzp[2] = GetNBit();
+  nzp[1] = GetZBit();
+  nzp[0] = GetPBit();
+
+  if(load_new_nzp)
+  {
+    N = SR.sr_n;
+    Z = SR.sr_z;
+    P = SR.sr_p;
+  }
+  
   return nzp;
-}
-
-/*
-* //TODO
-*/
-bool State::GetNBit(Stages stage) const
-{
-  switch (stage)
-  {
-    case STORE :
-      return SR.sr_n;
-      break;
-    default :
-      return N;
-      break;
-  }
-}
-
-/*
-* //TODO
-*/
-bool State::GetPBit(Stages stage) const
-{
-  switch (stage)
-  {
-    case STORE :
-      return SR.sr_p;
-      break;
-    default :
-      return P;
-      break;
-  }
-}
-
-/*
-* //TODO
-*/
-bool State::GetZBit(Stages stage) const
-{
-  switch (stage)
-  {
-    case STORE :
-      return SR.sr_z;
-      break;
-    default :
-      return Z;
-      break;
-  }
 }
 
 /*
@@ -163,7 +123,7 @@ void State::rdump(FILE * dumpsim_file)
   printf("-------------------------------------\n");
   printf("Cycle Count : %d\n", simulator().GetCycles());
   printf("CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter().to_num());
-  printf("CCs: N = %d  Z = %d  P = %d\n", GetNBit(UNDEFINED), GetZBit(UNDEFINED), GetPBit(UNDEFINED));
+  printf("CCs: N = %d  Z = %d  P = %d\n", GetNBit(), GetZBit(), GetPBit());
   printf("Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
@@ -177,7 +137,7 @@ void State::rdump(FILE * dumpsim_file)
   fprintf(dumpsim_file, "-------------------------------------\n");
   fprintf(dumpsim_file, "Cycle Count : %d\n", simulator().GetCycles());
   fprintf(dumpsim_file, "CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter().to_num());
-  fprintf(dumpsim_file, "CCs: N = %d  Z = %d  P = %d\n", GetNBit(UNDEFINED), GetZBit(UNDEFINED), GetPBit(UNDEFINED));
+  fprintf(dumpsim_file, "CCs: N = %d  Z = %d  P = %d\n", GetNBit(), GetZBit(), GetPBit());
   fprintf(dumpsim_file, "Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {

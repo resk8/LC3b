@@ -20,7 +20,7 @@ typedef struct PipeState_DE_stage_Struct {
   cs_bits de_ucode;
   bits16  de_sr1,
           de_sr2;
-  bool    de_sr2_idmux;
+  bits3   de_npc;
 } DE_Stage_Entry;
 
 typedef struct PipeState_MEM_stage_Struct {
@@ -65,10 +65,10 @@ class State
   void init_state();
   void SetProgramCounter(const bits16 & val) { PC = val; }
   bits16 GetProgramCounter() const {return PC; }
-  bool GetNBit(Stages stage) const;
-  bool GetPBit(Stages stage) const;
-  bool GetZBit(Stages stage) const;
-  bits3 GetNZP(Stages stage) const;
+  bool GetNBit() const { return N; };
+  bool GetPBit() const { return P; };
+  bool GetZBit() const { return Z; };
+  bits3 GetNZP(bool load_new_nzp);
   void SetDataForRegister(const bits3 & reg, const bits16 & data);
   bits16 GetRegisterData(const bits3 & reg) const;
   void rdump(FILE * dumpsim_file);

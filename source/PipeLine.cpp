@@ -64,7 +64,7 @@ void PipeLine::idump(FILE * dumpsim_file)
   printf("-------------------------------------\n");
   printf("Cycle Count     : %d\n", simulator().GetCycles());
   printf("CpuState.GetProgramCounter()              : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
-  printf("CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(UNDEFINED), cpu_state.GetZBit(UNDEFINED), cpu_state.GetPBit(UNDEFINED));
+  printf("CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
   printf("Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
@@ -149,7 +149,7 @@ void PipeLine::idump(FILE * dumpsim_file)
   fprintf(dumpsim_file,"-------------------------------------\n");
   fprintf(dumpsim_file,"Cycle Count     : %d\n", simulator().GetCycles());
   fprintf(dumpsim_file,"CpuState.GetProgramCounter()              : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
-  fprintf(dumpsim_file,"CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(UNDEFINED), cpu_state.GetZBit(UNDEFINED), cpu_state.GetPBit(UNDEFINED));
+  fprintf(dumpsim_file,"CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
   fprintf(dumpsim_file,"Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
@@ -435,7 +435,10 @@ void PipeLine::DE_stage()
 
   //Process the register file
   cpu_state.ProcessRegisterFile(DE.IR);
-   
+  
+  //CC logic
+  de_sig.de_npc = cpu_state.GetNZP(cpu_state.SrStage().v_sr_ld_cc);
+
   //Dependency check logic
 
 
@@ -454,7 +457,7 @@ void PipeLine::DE_stage()
     AGEX.SR2 = de_sig.de_sr2;
 
     /*AGEX CS*/
-    AGEX.CC = cpu_state.GetNZP((cpu_state.SrStage().v_sr_ld_cc) ? STORE : UNDEFINED);
+    AGEX.CC = de_sig.de_npc;
 
     /*AGEX CS bits*/
     AGEX.CS.range<19,0>() = de_sig.de_ucode.range<22,3>();
