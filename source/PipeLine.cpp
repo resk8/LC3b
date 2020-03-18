@@ -350,8 +350,8 @@ void PipeLine::ProcessRegisterFile(const bits16 & de_instruction)
 
 /*
 Check for any data dependency hazards
-An instruction in the DE stage may require a value produced by an older instruction that is 
-in the AGEX, MEM, or SR stage. If so, the instruction in the DE stage should be stalled, 
+An instruction in the DE stage may require a value produced by an older instruction that
+is in the AGEX, MEM, or SR stage. If so, the instruction in the DE stage should be stalled, 
 and a bubble should be inserted into the pipeline. Note that this implementation implies 
 that we are NOT using data forwarding.
 */
