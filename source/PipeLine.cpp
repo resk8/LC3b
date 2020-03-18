@@ -314,7 +314,7 @@ bool PipeLine::IsStallDetected()
           stall.mem_stall || 
           stall.v_agex_br_stall || 
           stall.v_de_br_stall ||          
-          (stall.v_mem_br_stall && !IsBranchTaken()));
+          (stall.v_mem_br_stall && !IsBranchTaken())); //TODO: this might be wrong
 }
 
 /*
@@ -525,17 +525,38 @@ void PipeLine::DE_stage()
   CONTROL_STORE_ADDRESS[0] = DE.IR[5];
   de_sig.de_ucode = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
 
-  //Process the register file
+  //The instruction in the DE stage also reads the register file and the condition codes. 
+  //The register file has two read ports: one for SR1 and one for SR2. DE.IR[8:6] are used 
+  //to address the register file to read SR1. Either DE.IR[11:9] or DE.IR[2:0] are used to 
+  //address the register file to read SR2. DE.IR[13] is used to select between 
+  //DE.IR[11:9] or DE.IR[2:0]. 2At the end of the clock cycle, the SR1 value from the 
+  //register file is latched into the AGEX.SR1 latch, and the SR2 value is latched into the 
+  //AGEX.SR2 latch.
   ProcessRegisterFile(DE.IR);
   
-  //CC logic, get the current cpu N Z P bits
+  //The value of the condition codes is latched into the 3-bit AGEX.CC latch.
+  //Condition code N is stored in AGEX.CC[2], Z is stored in AGEX.CC[1], and P is stored in 
+  //AGEX.CC[0]. Note that the condition codes and register file are read and the values 
+  //obtained are latched regardless of whether an instruction needs these values.
   de_sig.de_npc = cpu_state.GetNZP(cpu_state.SrStage().v_sr_ld_cc);
 
-  //Dependency check logic, check for data dependecys
-  //to stall or add bubbles in the pipeline
+  //Dependency check logic indicates whether or not the instruction in the DE stage should
+  //be propagated forward. If DEP.STALL is asserted, the state of the DE latches should 
+  //not be changed, and a bubble needs to be inserted into the AGEX stage. This is accomplished 
+  //by setting the valid bit for the AGEX stage (AGEX.V) to 0. Other actions need to be taken 
+  //to preserve the correct value of the PC. Therefore, the DEP.STALL signal is also used 
+  //by the structures physically located in the F stage
   stall.dep_stall = CheckForDataDependencies();
 
-  //instert a bubble if there is a stall in the mem stage
+  //The BR.STALL signal from the control store indicates that the instruction being processed 
+  //is a control instruction, and hence the frontend of the pipeline should be stalled until 
+  //this instruction updates the PC in the MEM stage. In the DE stage, if DE.V is 1 and BR.STALL 
+  //is 1, then the DE.BR.STALL signal should be asserted. This indicates that the instruction 
+  //in the DE stage is a valid control instruction. The DE.BR.STALL signal is used to insert 
+  //bubbles into the pipeline in the F stage
+  stall.v_de_br_stall = DE.V && micro_sequencer.Get_DE_BR_STALL(de_sig.de_ucode);
+
+  //if mem stage is already stalled dont change the state of mem latch  
   auto LD_AGEX = (stall.mem_stall) ? 0 : 1;
   if (LD_AGEX)
   {
@@ -585,7 +606,13 @@ void PipeLine::FETCH_stage()
   //the de npc latch will be the address of the next instruction
   auto de_npc = cpu_state.GetProgramCounter() + 2;
 
-  //Decide on what the next program counter will be
+  //If a control instruction other than TRAP is supposed to write 
+  //into the PC, the TARGET.PC value coming from the MEM stage should be latched into 
+  //the PC at the end of the current cycle. If a TRAP instruction is supposed to write 
+  //into the PC, the TRAP.PC value coming from the MEM stage should be latched into the
+  //PC at the end of the current cycle. The next value to be latched into the PC is 
+  //controlled by the MEM.PCMUX signal, which is generated in the MEM stage, and the 
+  //LD.PC signal
   switch(mem_stage.mem_pc_mux.to_num())
   {
     case 0:
@@ -601,7 +628,8 @@ void PipeLine::FETCH_stage()
       break; //TODO: should not happen. add an exception?
   }
   
-  //If no stall is detected then update the Program Counter
+  //if there are no stalls or control instructions in the pipeline, 
+  //the PC should be incremented by 2. 
   if(!IsStallDetected())
   {    
     cpu_state.SetProgramCounter(new_pc);
