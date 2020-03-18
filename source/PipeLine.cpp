@@ -349,7 +349,7 @@ void PipeLine::ProcessRegisterFile(const bits16 & de_instruction)
 }
 
 /*
-Check for any data depency hazard
+Check for any data dependency hazards
 An instruction in the DE stage may require a value produced by an older instruction that is 
 in the AGEX, MEM, or SR stage. If so, the instruction in the DE stage should be stalled, 
 and a bubble should be inserted into the pipeline. Note that this implementation implies 
@@ -463,7 +463,6 @@ void PipeLine::SR_stage()
   sr_sig.sr_p = ((!sr_sig.sr_n) && (!sr_sig.sr_z));
 }
 
-
 /************************* MEM_stage() *************************/
 void PipeLine::MEM_stage() 
 {
@@ -483,7 +482,6 @@ void PipeLine::MEM_stage()
   SR.CS.range<3,0>() = MEM.CS.range<10,7>();
   
 }
-
 
 /************************* AGEX_stage() *************************/
 void PipeLine::AGEX_stage() 
@@ -509,8 +507,6 @@ void PipeLine::AGEX_stage()
     MEM.CS.range<10,0>() = AGEX.CS.range<19,9>();
   }
 }
-
-
 
 /************************* DE_stage() *************************/
 void PipeLine::DE_stage() 
