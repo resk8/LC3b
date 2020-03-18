@@ -40,6 +40,8 @@ class PipeLine
   bool IsControlInstruction();
   bool IsOperateInstruction();
   bool IsMemoryMoveInstruction();
+  void ProcessRegisterFile(const bits16 & de_instruction);
+  bool CheckForDataDependencies();
 
   private:
   Simulator & _simulator;

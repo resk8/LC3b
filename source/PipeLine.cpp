@@ -318,6 +318,102 @@ bool PipeLine::IsStallDetected()
 }
 
 /*
+* Loads new data into destination register and return data from reg sr1 and sr2
+*/
+void PipeLine::ProcessRegisterFile(const bits16 & de_instruction)
+{
+  auto & cpu_state = simulator().state();
+  auto & DE = cpu_state.DecodeStage();
+  auto & SR = cpu_state.SrStage();
+
+  //select the sr2 register based on the type
+  //of access: register or immediate 
+  //SR2.IDMUX = de_instruction[13]
+  DE.de_sr1 = de_instruction.range<8,6>();
+  if(de_instruction[13]) 
+    DE.de_sr2 = de_instruction.range<11,9>();
+  else
+    DE.de_sr2 = de_instruction.range<2,0>();
+
+  //get the data from the register
+  //to be used in the Decode stage
+  DE.de_sr1_data = cpu_state.GetRegisterData(DE.de_sr1);
+  DE.de_sr2_data = cpu_state.GetRegisterData(DE.de_sr2);
+
+  //load processed data into destinaion
+  //register baed on ucode bit  
+  if(SR.v_sr_ld_reg)
+  {
+    cpu_state.SetDataForRegister(SR.sr_reg_id, SR.sr_reg_data);
+  }
+}
+
+/*
+Check for any data depency hazard
+An instruction in the DE stage may require a value produced by an older instruction that is 
+in the AGEX, MEM, or SR stage. If so, the instruction in the DE stage should be stalled, 
+and a bubble should be inserted into the pipeline. Note that this implementation implies 
+that we are NOT using data forwarding.
+*/
+bool PipeLine::CheckForDataDependencies()
+{
+  auto & cpu_state = simulator().state();  
+  auto & ucode = simulator().microsequencer();
+  auto & de_latch = latch(DECODE,PS);
+  auto & agex_latch = latch(AGEX,PS);
+  auto & mem_latch = latch(MEMORY,PS);
+  auto & sr_latch = latch(STORE,PS);
+
+  //check for dependecy if no stalls
+  //were detected in the fetch stage
+  if(de_latch.V)
+  {
+    auto & de_sig = cpu_state.DecodeStage();
+    auto & agex_sig = cpu_state.AgexStage();    
+    auto & mem_sig = cpu_state.MemStage();
+    auto & sr_sig = cpu_state.SrStage();
+
+    //Get SR1/SR2 needed bits from the control store ucode
+    auto sr1_needed = ucode.Get_SR1_NEEDED(de_sig.de_ucode);
+    auto sr2_needed = ucode.Get_SR2_NEEDED(de_sig.de_ucode);
+    auto branch_op = ucode.Get_BR_OP(de_sig.de_ucode);
+
+    //To determine if a dependency exists, the Dependency Check Logic compares the 
+    //destination register number of the instructions in the AGEX, MEM, and SR stages 
+    //to the source register numbers of the instruction in the DE stage. If a match 
+    //is found and the instruction in the DE stage actually needs the source register
+    //(as indicated by the SR1.NEEDED or SR2.NEEDED control signal) and an instruction 
+    //in a later stage actually writes to the same register (as indicated by the 
+    //V.AGEX.LD.REG, V.MEM.LD.REG, or V.SR.LD.REG signals), DEP.STALL should be set to 1
+    if(sr1_needed)
+    {
+      if((agex_sig.v_agex_ld_reg && (de_sig.de_sr1.to_num() == agex_latch.DRID.to_num())) ||
+         (mem_sig.v_mem_ld_reg &&  (de_sig.de_sr1.to_num() == mem_latch.DRID.to_num())) || 
+         (sr_sig.v_sr_ld_reg && (de_sig.de_sr1.to_num() == sr_latch.DRID.to_num())))
+          return true;
+    }
+
+    if(sr2_needed)
+    {
+      if((agex_sig.v_agex_ld_reg && (de_sig.de_sr2.to_num() == agex_latch.DRID.to_num())) ||
+         (mem_sig.v_mem_ld_reg &&  (de_sig.de_sr2.to_num() == mem_latch.DRID.to_num())) || 
+         (sr_sig.v_sr_ld_reg && (de_sig.de_sr2.to_num() == sr_latch.DRID.to_num())))
+          return true;
+    }
+
+    //If the instruction in the DE stage is a conditional branch instruction 
+    //(as indicated by the BR.OP control signal), and if any of the instructions 
+    //in the AGEX, MEM, or SR stages is writing to the condition codes, then DEP.STALL
+    if(branch_op && 
+        (agex_sig.v_agex_ld_cc ||
+         mem_sig.v_mem_ld_cc ||
+         sr_sig.v_sr_ld_cc))
+         return true;
+  }
+  return false;
+}
+
+/*
 * move the pipeline to its next stages
 */
 void PipeLine::PropagatePipeLine()
@@ -421,12 +517,12 @@ void PipeLine::DE_stage()
 {
   SetStage(DECODE);
   auto & cpu_state = simulator().state(); 
-  auto & de_sig = simulator().state().DecodeStage();
+  auto & de_sig = cpu_state.DecodeStage();
+  auto & stall = cpu_state.Stall();
   auto & micro_sequencer = simulator().microsequencer();
   auto & DE = latch(MEMORY,PS);
   auto & AGEX = latch(STORE,NEW_PS);
   auto CONTROL_STORE_ADDRESS = bitfield<6>(0);
-  auto LD_AGEX = false;
 
   //get micro code state
   CONTROL_STORE_ADDRESS.range<5,1>() = DE.IR.range<15,11>();
@@ -434,14 +530,17 @@ void PipeLine::DE_stage()
   de_sig.de_ucode = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
 
   //Process the register file
-  cpu_state.ProcessRegisterFile(DE.IR);
+  ProcessRegisterFile(DE.IR);
   
-  //CC logic
+  //CC logic, get the current cpu N Z P bits
   de_sig.de_npc = cpu_state.GetNZP(cpu_state.SrStage().v_sr_ld_cc);
 
-  //Dependency check logic
+  //Dependency check logic, check for data dependecys
+  //to stall or add bubbles in the pipeline
+  stall.dep_stall = CheckForDataDependencies();
 
-
+  //instert a bubble if there is a stall in the mem stage
+  auto LD_AGEX = (stall.mem_stall) ? 0 : 1;
   if (LD_AGEX)
   {
     /*AGEX NPC*/
@@ -451,10 +550,10 @@ void PipeLine::DE_stage()
     AGEX.IR = DE.IR;
 
     /*AGEX SR1 needed*/
-    AGEX.SR1 = de_sig.de_sr1;
+    AGEX.SR1 = de_sig.de_sr1_data;
 
     /*AGEX SR2 needed*/
-    AGEX.SR2 = de_sig.de_sr2;
+    AGEX.SR2 = de_sig.de_sr2_data;
 
     /*AGEX CS*/
     AGEX.CC = de_sig.de_npc;
@@ -468,8 +567,8 @@ void PipeLine::DE_stage()
     else
       AGEX.DRID = DE.IR.range<11,9>();
 
-    /*AGEX Valid*/
-    AGEX.V = 0; //TODO        
+    /*AGEX Valid: valid if no stall or bubbles were detected*/    
+    AGEX.V = (!stall.dep_stall) && (DE.V);
   }
 }
 

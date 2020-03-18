@@ -27,6 +27,7 @@ void State::init_state()
   REGS = std::vector<bits16>(LC3b_REGS);
 
   std::memset(&DE, 0, sizeof(PipeState_DE_stage_Struct));
+  std::memset(&AGEX, 0, sizeof(PipeState_AGEX_stage_Struct));
   std::memset(&MEM, 0, sizeof(PipeState_MEM_stage_Struct));
   std::memset(&SR, 0,sizeof(PipeState_SR_stage_Struct));
   std::memset(&STALL, 0, sizeof(PipeState_Hazards_Struct));
@@ -42,6 +43,8 @@ bits3 State::GetNZP(bool load_new_nzp)
   nzp[1] = GetZBit();
   nzp[0] = GetPBit();
 
+  //load new nzp bits into cpu
+  //nzp from the store stage
   if(load_new_nzp)
   {
     N = SR.sr_n;
@@ -85,27 +88,6 @@ bits16 State::GetRegisterData(const bits3 & reg) const
     printf("Error: Invalid Register: reg=%d\n",reg);
     printf("C++ error code : %s\n",oor.what());
     Exit();  
-  }
-}
-
-/*
-* Loads new data into destination register and return data from reg sr1 and sr2
-*/
-void State::ProcessRegisterFile(const bits16 & de_instruction)
-{
-  auto sr1 = de_instruction.range<8,6>();
-  auto sr2 = bits3(0);
-  if(de_instruction[13] /*SR2.IDMUX*/) 
-    sr2 = de_instruction.range<11,9>();
-  else
-    sr2 = de_instruction.range<2,0>();
-
-  DE.de_sr1 = GetRegisterData(sr1);
-  DE.de_sr2 = GetRegisterData(sr2);
-
-  if(SR.v_sr_ld_reg)
-  {
-    SetDataForRegister(SR.sr_reg_id, SR.sr_reg_data);
   }
 }
 
