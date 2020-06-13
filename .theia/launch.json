@@ -4,7 +4,7 @@
             "name": "Run Debug",
             "request": "launch",
             "type": "gdb",
-            "program": "${workspaceFolder}/build/source/LC3b",
+            "program": "${workspaceFolder}/build/source/lC3b",
             "args": ["ucode6.txt","exemple1.obj"],
             "cwd": "${workspaceFolder}/doc/test",
             "externalConsole": false

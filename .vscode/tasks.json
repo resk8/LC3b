@@ -3,8 +3,8 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "Windows Build",
-            "command": "cd build ; cmake -G 'MinGW Makefiles' -D CMAKE_EXPORT_COMPILE_COMMANDS=1 .. ; mingw32-make ; cd ..",
+            "label": "Linux Build",
+            "command": "cd build ; cmake -G 'Unix Makefiles' -D CMAKE_EXPORT_COMPILE_COMMANDS=1 .. ; make ; cd ..",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -18,7 +18,7 @@
         },
         {
             "type": "shell",
-            "label": "Windows clean",
+            "label": "Linux clean",
             "command": "cd build ; mingw32-make clean; cd ..",
             "options": {
                 "cwd": "${workspaceFolder}"

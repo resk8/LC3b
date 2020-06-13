@@ -9,7 +9,7 @@ project(${problem} CXX)
 
 # Enable C++17 features on gcc/clang
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "(GNU|Clang)")
-    set(CMAKE_CXX_FLAGS "-std=c++17 -g -Wno-return-type")
+    set(CMAKE_CXX_FLAGS "-std=c++17 -g -Wno-return-type -Wformat=0")
 endif()
 
 add_subdirectory(source)

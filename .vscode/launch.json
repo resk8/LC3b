@@ -8,18 +8,18 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}\\build\\source\\LC3b.exe",
+            "program": "${workspaceFolder}/build/source/lC3b",
             "args": ["ucode6.txt","exemple1.obj"],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}\\doc\\test",
+            "cwd": "${workspaceFolder}/doc/test",
             "environment": [],
-            "externalConsole": true,
+            "externalConsole": false,
             "MIMode": "gdb",
-            "miDebuggerPath": "C:\\MinGW\\bin\\gdb-python27.exe",
-            "preLaunchTask": "Windows Build",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "preLaunchTask": "Linux Build",
             "setupCommands": [                
                 { 
-                    "text": "source ${workspaceFolder}\\.gdbinit",
+                    "text": "source ${workspaceFolder}/.gdbinit",
                     "ignoreFailures": true
                 },
                 { 
