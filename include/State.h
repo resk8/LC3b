@@ -84,11 +84,11 @@ class State
   bits16 GetRegisterData(const bits3 & reg) const;
   void rdump(FILE * dumpsim_file);
 
-  Stall_Entry & Stall() { return STALL; }
-  AGEX_Stage_Entry & AgexStage() {return AGEX; }
-  DE_Stage_Entry & DecodeStage() {return DE; }
-  MEM_Stage_Entry & MemStage() {return MEM; }
-  SR_Stage_Entry & SrStage() {return SR; }  
+  Stall_Entry & Stall() { return stall_sigs; }
+  AGEX_Stage_Entry & AgexStage() {return agex_sigs; }
+  DE_Stage_Entry & DecodeStage() {return decode_sigs; }
+  MEM_Stage_Entry & MemStage() {return memory_sigs; }
+  SR_Stage_Entry & SrStage() {return store_sigs; }  
   
 
   private:
@@ -106,9 +106,9 @@ class State
        Z,    /* z condition bit */
        P;	   /* p condition bit */
 
-  DE_Stage_Entry DE;
-  AGEX_Stage_Entry AGEX;
-  MEM_Stage_Entry MEM;
-  SR_Stage_Entry SR;
-  Stall_Entry STALL;
+  DE_Stage_Entry decode_sigs;
+  AGEX_Stage_Entry agex_sigs;
+  MEM_Stage_Entry memory_sigs;
+  SR_Stage_Entry store_sigs;
+  Stall_Entry stall_sigs;
 };

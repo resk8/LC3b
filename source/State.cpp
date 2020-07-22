@@ -26,11 +26,11 @@ void State::init_state()
   Z = 1;
   REGS = std::vector<bits16>(LC3b_REGS);
 
-  std::memset(&DE, 0, sizeof(PipeState_DE_stage_Struct));
-  std::memset(&AGEX, 0, sizeof(PipeState_AGEX_stage_Struct));
-  std::memset(&MEM, 0, sizeof(PipeState_MEM_stage_Struct));
-  std::memset(&SR, 0,sizeof(PipeState_SR_stage_Struct));
-  std::memset(&STALL, 0, sizeof(PipeState_Hazards_Struct));
+  std::memset(&decode_sigs, 0, sizeof(PipeState_DE_stage_Struct));
+  std::memset(&agex_sigs, 0, sizeof(PipeState_AGEX_stage_Struct));
+  std::memset(&memory_sigs, 0, sizeof(PipeState_MEM_stage_Struct));
+  std::memset(&store_sigs, 0,sizeof(PipeState_SR_stage_Struct));
+  std::memset(&stall_sigs, 0, sizeof(PipeState_Hazards_Struct));
 }
 
 /*
@@ -47,9 +47,9 @@ bits3 State::GetNZP(bool load_new_nzp)
   //nzp from the store stage
   if(load_new_nzp)
   {
-    N = SR.sr_n;
-    Z = SR.sr_z;
-    P = SR.sr_p;
+    N = store_sigs.sr_n;
+    Z = store_sigs.sr_z;
+    P = store_sigs.sr_p;
   }
   
   return nzp;

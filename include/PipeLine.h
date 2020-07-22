@@ -9,7 +9,7 @@
 #endif
 
 class Latch;
-typedef std::vector<std::shared_ptr<Latch>> PipeLatches;
+typedef std::vector<std::shared_ptr<Latch>> PipeState;
 
 class Simulator;
 class PipeLine
@@ -19,7 +19,7 @@ class PipeLine
   ~PipeLine(){}
 
   Simulator & simulator() { return _simulator; }
-  Latch & latch(Stages stage, const PipeLatches & latch);
+  Latch & latch(Stages stage, const PipeState & latch);
 
   void idump(FILE * dumpsim_file);
 
@@ -34,7 +34,7 @@ class PipeLine
   void MEM_stage();
   void SR_stage();
   void PropagatePipeLine();
-  void MoveLatch(const PipeLatches & destination, const PipeLatches & source);
+  void MoveLatch(const PipeState & destination, const PipeState & source);
   bool IsStallDetected();
   bool IsBranchTaken();
   bool IsControlInstruction();
@@ -47,8 +47,8 @@ class PipeLine
   Simulator & _simulator;
 
   /* data structure for latch */
-  PipeLatches PS;
-  PipeLatches NEW_PS;
+  PipeState PS;
+  PipeState NEW_PS;
 
   Stages current_stage;
 };

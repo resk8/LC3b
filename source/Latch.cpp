@@ -17,17 +17,19 @@
 */
 Latch::Latch(PipeLine & instance) : 
 _pipe(instance),
-NPC(bits16()),
-DATA(bits16()),
-SR1(bits16()),
-SR2(bits16()),
-ALU_RESULT(bits16()),
-ADDRESS(bits16()),
-IR(bits16()),
-DRID(bits3()),
-CC(bits3()),
+NPC(0),
+DATA(0),
+SR1(0),
+SR2(0),
+ALU_RESULT(0),
+ADDRESS(0),
+IR(0),
+DRID(0),
+CC(0),
 V(false),
-CS(cs_bits())
+AGEX_CS(0),
+MEM_CS(0),
+SR_CS(0)
 {
 
 }
@@ -47,5 +49,7 @@ void Latch::operator=(const Latch & latch)
     DRID = latch.DRID;
     CC = latch.CC;
     V = latch.V;
-    CS = latch.CS;
+    AGEX_CS = latch.AGEX_CS;
+    MEM_CS = latch.MEM_CS;
+    SR_CS = latch.SR_CS;
 }
