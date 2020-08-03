@@ -84,13 +84,6 @@ template<size_t n_bits> class bitfield
         return bitfield_private::range<n_bits,e,b,true>(*this);
       }
 
-    //! Assign a character string to the bitfield, e.g. bitset<3> mybitset; mybitset = "101";
-    template<std::size_t N>
-      void operator=(char const (& x) [N] ) 
-      {
-        range<n_bits-1,0>() = x;
-      }
-
     //! Assign an integer value to the bitfield, e.g. bitset<8> mybitset; mybitset = 0xFA;
     void operator=(native_type v)
     {
@@ -131,12 +124,6 @@ template<size_t n_bits> class bitfield
     bitfield<n_bits> operator<<(native_type v) const
     {
       return range<n_bits-1,0>().to_num() << v;
-    }
-
-    //! Convert the bitfield to a string for printing
-    std::string to_string() const
-    {
-      return this->range<n_bits-1,0>().to_string();
     }
 
     //! Convert the bitfield to a number
@@ -192,21 +179,6 @@ namespace bitfield_private
           parent_(other.parent)
         { }
 
-      //! Assign a character string to the range, e.g. mybitset.range<4,2>() = "101";
-      template<std::size_t N, bool is_const_dummy = is_const>
-        typename std::enable_if<is_const_dummy == false, void>::type
-        operator=(char const (& x) [N] ) 
-        {
-          static_assert(N-1 == n_range_bits, "Wrong number of characters in range assignment");
-          for(size_t i=b; i<=e; ++i) 
-          {
-            if(x[i-b] == '0' || x[i-b] == '1') 
-              parent_[e-i] = (x[i-b] == '1');
-            else 
-              throw std::invalid_argument("Only 0 and 1 are allowed in assignment strings. You gave " + std::string(1, x[b-i]));
-          }
-        }
-
       //! Assign an integer value to the range, e.g. mybitset.range<7,0>() = 0xFA;
       template<bool is_const_dummy = is_const>
         typename std::enable_if<is_const_dummy == false, void>::type
@@ -225,24 +197,179 @@ namespace bitfield_private
       //! Copy another range's values to this one
       /*! For example
        *  @code
-       *   b2.range<3,0>() = b1.range<4,7>();
+       *   b2.range<3,0>() = b1.range<7,3>();
        *  @endcode */
       template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
         typename std::enable_if<is_const_dummy == false, void>::type
         operator=(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
       {
         static_assert(n_range_bits == other_e+1-other_b, "Trying to assign ranges with mismatching sizes");
-        for(size_t i=0; i<n_range_bits; ++i)
-          (*this)[i] = other[i];
+
+        for(size_t i=other_b, j=b; i<=other_e && j<=e; ++i, ++j)
+          (*this)[j] = other[i];
       }
 
-      //! Convert the bitfield range to a string for printing
-      std::string to_string()
+      //! add another range's values to this one and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() + b1.range<7,3>();
+       *  @endcode */
+      template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator+(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
       {
-        std::string s(n_range_bits, '-');
-        for(size_t i=0; i<n_range_bits; ++i)
-          s[n_range_bits-i-1] = (*this)[i] ? '1' : '0';
-        return s;
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to add ranges with mismatching sizes");
+        
+        bool c = false;
+        parent_type tmp;
+        for(size_t i=other_b, j=b; i<=other_e && j<=e; ++i, ++j)
+        {
+          tmp[j] = (((*this)[j] != other[i]) != c); // c is carry
+          c = (((*this)[j] && other[i]) || ((*this)[j] && c)) || (other[i] && c);
+        }
+        return tmp;
+      }
+
+      //! add a value to this one and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() + 0x3
+       *  @endcode */
+      template<bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator+(native_range_type v)
+      {
+        if(v > ((1 << n_range_bits) - 1))
+          throw std::invalid_argument("Too large a value given to range");
+
+        bool c = false;
+        parent_type tmp;
+        for(size_t i=b; i<=e; ++i)
+        {
+          bool val = v & 0x01;
+          tmp[i] = (((*this)[i] != val) != c); // c is carry
+          c = (((*this)[i] && val) || ((*this)[i] && c)) || (val && c);
+          v = v >> 1;
+        }
+      }
+
+      //! OR another range's values to this one and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() | b1.range<7,3>();
+       *  @endcode */
+      template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator|(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
+      {        
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to OR ranges with mismatching sizes");
+
+        parent_type tmp;
+        for(size_t i=other_b, j=b; i<=other_e && j<=e; ++i, ++j)
+          tmp[j] = (*this)[j] || other[i];
+        return tmp;
+      }
+
+      //! OR a value to this range and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() | 0xA
+       *  @endcode */
+      template<bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator|(native_range_type v)
+      {
+        if(v > ((1 << n_range_bits) - 1))
+          throw std::invalid_argument("Too large a value given to range");
+
+        parent_type tmp;
+        for(size_t i=b; i<=e; ++i)
+        {
+          bool val = v & 0x01;
+          tmp[i] = (*this)[i] || val;
+          v = v >> 1;
+        }
+        return tmp;
+      }
+
+      //! AND another range's values to this one and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() & b1.range<7,3>();
+       *  @endcode */
+      template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator&(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
+      {
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to AND ranges with mismatching sizes");
+
+        parent_type tmp;
+        for(size_t i=other_b, j=b; i<=other_e && j<=e; ++i, ++j)
+          tmp[j] = (*this)[j] && other[i];
+        return tmp;
+      }
+
+      //! AND a value to this range and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() & 0xA
+       *  @endcode */
+      template<bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator&(native_range_type v)
+      {
+        if(v > ((1 << n_range_bits) - 1))
+          throw std::invalid_argument("Too large a value given to range");
+
+        parent_type tmp;
+        for(size_t i=b; i<=e; ++i)
+        {
+          bool val = v & 0x01;
+          tmp[i] = (*this)[i] && val;
+          v = v >> 1;
+        }
+        return tmp;
+      }
+
+      //! shift left another range's values to this one and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() >> b1.range<7,3>();
+       *  @endcode */
+      template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator>>(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
+      {        
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to left shift ranges with mismatching sizes");
+
+        auto shift = other.to_num();
+        bool tmp = (*this)
+        parent_type new_range;
+        for(size_t i=0; i<shift; ++i)
+          new_range[i] = (*this)[i] && other[i];
+        return new_range;
+      }
+
+      //! shift left a value to this range and return a new range
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() >> 0xA
+       *  @endcode */
+      template<bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type const &>::type
+        operator>>(native_range_type v)
+      {
+        if(v > ((1 << n_range_bits) - 1))
+          throw std::invalid_argument("Too large a value given to range");
+
+        auto tmp = (*this);
+        for(size_t i=b; i<=e; ++i)
+        {
+          bool val = v & 0x01;
+          tmp[i] = (*this)[i] && val;
+          v = v >> 1;
+        }
+        return tmp;
       }
 
       //! Convert the bitfield to a number
