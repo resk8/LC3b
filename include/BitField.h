@@ -1,5 +1,5 @@
 //*********************************************************
-//Randolph Voorhies, bitfield, (2014), GitHub repository, 
+//Randolph Voorhies, bitfield, (2014), GitHub repository,
 //https://github.com/randvoorhies/bitfield
 //*********************************************************
 #pragma once
@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <algorithm>
+#include <bitset>
 #include <iostream>
 
 namespace bitfield_private
@@ -32,7 +33,7 @@ template<size_t n_bits> class bitfield
   public:
 
     //! The native storage type
-    typedef std::array<bool, n_bits> storage_t;
+    typedef std::bitset<n_bits> storage_t;
 
     //! The integral type that this bitfield can store.
     typedef typename bitfield_private::uintx_t<n_bits>::type native_type;
@@ -40,7 +41,7 @@ template<size_t n_bits> class bitfield
     //! Default constructor - set to all zeros
     bitfield()
     {
-      b_.fill(false);
+      b_ = std::bitset<n_bits>(0);
     }
 
     //! Construct from an integer value
@@ -54,7 +55,7 @@ template<size_t n_bits> class bitfield
 
     //! Copy from a range
     /*! For example:
-     *  @code 
+     *  @code
      *    bitfield<4> b2 = b1.range<3,0>();
      *  @endcode */
     template<size_t o_bits, size_t e, size_t b, bool is_const>
@@ -66,8 +67,8 @@ template<size_t n_bits> class bitfield
 
     //! Access a range of the bitfield
     template<size_t e, size_t b>
-      bitfield_private::range<n_bits,e,b,false> range() 
-      { 
+      bitfield_private::range<n_bits,e,b,false> range()
+      {
         static_assert(e >= b,   "bitfield<bits>::range<e,b> must be called with e >= b");
         static_assert(e < n_bits, "bitfield<bits>::range<e,b> must be called with e < bits and b");
 
@@ -77,18 +78,11 @@ template<size_t n_bits> class bitfield
     //! Access a range of the bitfield (const version)
     template<size_t e, size_t b>
       bitfield_private::range<n_bits,e,b,true> range() const
-      { 
+      {
         static_assert(e >= b,   "bitfield<bits>::range<e,b> must be called with e >= b");
         static_assert(e < n_bits, "bitfield<bits>::range<e,b> must be called with e < bits and b");
 
         return bitfield_private::range<n_bits,e,b,true>(*this);
-      }
-
-    //! Assign a character string to the bitfield, e.g. bitset<3> mybitset; mybitset = "101";
-    template<std::size_t N>
-      void operator=(char const (& x) [N] ) 
-      {
-        range<n_bits-1,0>() = x;
       }
 
     //! Assign an integer value to the bitfield, e.g. bitset<8> mybitset; mybitset = 0xFA;
@@ -98,55 +92,57 @@ template<size_t n_bits> class bitfield
     }
 
     //
-    bitfield<n_bits> operator+(native_type v) const
+    bitfield operator+(bitfield<n_bits> const & other) const
     {
-      return range<n_bits-1,0>().to_num() + v;
+     return range<n_bits-1,0>().to_num() + other.to_num();
     }
 
     //
-    bitfield<n_bits> operator&(native_type v) const
+    bitfield operator+(native_type v) const
     {
-      return range<n_bits-1,0>().to_num() & v;
+     return range<n_bits-1,0>().to_num() + v;
     }
 
     //
-    bitfield<n_bits> operator|(native_type v) const
+    bitfield operator<<(native_type v) const
     {
-      return range<n_bits-1,0>().to_num() | v;
+     return range<n_bits-1,0>().to_num() << v;
     }
 
     //
-    bitfield<n_bits> operator~() const
+    bitfield operator>>(native_type v) const
     {
-      return ~range<n_bits-1,0>().to_num();
+     return range<n_bits-1,0>().to_num() >> v;
     }
 
-    //
-    bitfield<n_bits> operator>>(native_type v) const
+    bitfield operator|(bitfield<n_bits> const & other)
     {
-      return range<n_bits-1,0>().to_num() >> v;
+      return range<n_bits-1,0>() | other.range<n_bits-1,0>();
     }
 
-    //
-    bitfield<n_bits> operator<<(native_type v) const
+    bitfield operator&(bitfield<n_bits> const & other)
     {
-      return range<n_bits-1,0>().to_num() << v;
+      return range<n_bits-1,0>() & other.range<n_bits-1,0>();
     }
 
-    //! Convert the bitfield to a string for printing
-    std::string to_string() const
+    bitfield operator^(bitfield<n_bits> const & other)
     {
-      return this->range<n_bits-1,0>().to_string();
+      return range<n_bits-1,0>() ^ other.range<n_bits-1,0>();
+    }
+
+    bitfield operator~() const
+    {
+      return ~range<n_bits-1,0>();
     }
 
     //! Convert the bitfield to a number
-    typename bitfield_private::uintx_t<n_bits>::type to_num() const
+    native_type to_num() const
     {
       return this->range<n_bits-1,0>().to_num();
     }
 
     //! Access a single bit of the bitfield
-    bool & operator[](size_t i)
+    typename std::bitset<n_bits>::reference operator[](size_t i)
     {
       return this->range<n_bits-1,0>()[i];
     }
@@ -181,31 +177,16 @@ namespace bitfield_private
       typedef typename uintx_t<n_range_bits>::type native_range_type;
 
       //! The type of the parent (either const or not)
-      typedef typename parent_wrapper<bitfield<parent_bits>, is_const>::type parent_type; 
+      typedef typename parent_wrapper<bitfield<parent_bits>, is_const>::type parent_type;
 
       //! Construct from a parent
       range(parent_type parent) : parent_(parent) {}
 
-      //! Copy constructor from 
+      //! Copy constructor from
       template<size_t other_parent_bits, size_t other_e, size_t other_b>
         range(range<other_parent_bits, other_e, other_b, true> const & other) :
           parent_(other.parent)
         { }
-
-      //! Assign a character string to the range, e.g. mybitset.range<4,2>() = "101";
-      template<std::size_t N, bool is_const_dummy = is_const>
-        typename std::enable_if<is_const_dummy == false, void>::type
-        operator=(char const (& x) [N] ) 
-        {
-          static_assert(N-1 == n_range_bits, "Wrong number of characters in range assignment");
-          for(size_t i=b; i<=e; ++i) 
-          {
-            if(x[i-b] == '0' || x[i-b] == '1') 
-              parent_[e-i] = (x[i-b] == '1');
-            else 
-              throw std::invalid_argument("Only 0 and 1 are allowed in assignment strings. You gave " + std::string(1, x[b-i]));
-          }
-        }
 
       //! Assign an integer value to the range, e.g. mybitset.range<7,0>() = 0xFA;
       template<bool is_const_dummy = is_const>
@@ -236,13 +217,92 @@ namespace bitfield_private
           (*this)[i] = other[i];
       }
 
-      //! Convert the bitfield range to a string for printing
-      std::string to_string()
+      //! OR another range's values to this one and returns ad new bitfield
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() | b1.range<4,7>();
+       *  @endcode */
+      template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type>::type
+        operator|(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
       {
-        std::string s(n_range_bits, '-');
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to assign ranges with mismatching sizes");
+        parent_type tmp;
         for(size_t i=0; i<n_range_bits; ++i)
-          s[n_range_bits-i-1] = (*this)[i] ? '1' : '0';
-        return s;
+          tmp[i] = (*this)[i] | other[i];
+        return tmp;
+      }
+      template<size_t other_parent_bits, size_t other_e, size_t other_b>
+        parent_type operator|(range<other_parent_bits, other_e, other_b, true> const & other)
+      {
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to assign ranges with mismatching sizes");
+        parent_type tmp = parent_;
+        for(size_t i=0; i<n_range_bits; ++i)
+          tmp[i] = tmp[i] | other[i];
+        return tmp;
+      }
+
+      //! AND another range's values to this one and returns ad new bitfield
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() & b1.range<4,7>();
+       *  @endcode */
+      template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type>::type
+        operator&(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
+      {
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to assign ranges with mismatching sizes");
+        parent_type tmp;
+        for(size_t i=0; i<n_range_bits; ++i)
+          tmp[i] = (*this)[i] & other[i];
+        return tmp;
+      }
+      template<size_t other_parent_bits, size_t other_e, size_t other_b>
+        parent_type operator&(range<other_parent_bits, other_e, other_b, true> const & other)
+      {
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to assign ranges with mismatching sizes");
+        parent_type tmp = parent_;
+        for(size_t i=0; i<n_range_bits; ++i)
+          tmp[i] = tmp[i] & other[i];
+        return tmp;
+      }
+      //! XOR another range's values to this one and returns ad new bitfield
+      /*! For example
+       *  @code
+       *   b3.range<3,0>() = b2.range<3,0>() ^ b1.range<4,7>();
+       *  @endcode */
+      template<size_t other_parent_bits, size_t other_e, size_t other_b, bool other_is_const, bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type>::type
+        operator^(range<other_parent_bits, other_e, other_b, other_is_const> const & other)
+      {
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to assign ranges with mismatching sizes");
+        parent_type tmp;
+        for(size_t i=0; i<n_range_bits; ++i)
+          tmp[i] = (*this)[i] ^ other[i];
+        return tmp;
+      }
+      template<size_t other_parent_bits, size_t other_e, size_t other_b>
+        parent_type operator^(range<other_parent_bits, other_e, other_b, true> const & other)
+      {
+        static_assert(n_range_bits == other_e+1-other_b, "Trying to assign ranges with mismatching sizes");
+        parent_type tmp = parent_;
+        for(size_t i=0; i<n_range_bits; ++i)
+          tmp[i] = tmp[i] ^ other[i];
+        return tmp;
+      }
+      //! NOT this range's values and returns a new bitfield
+      /*! For example
+       *  @code
+       *   b2.range<3,0>() = ~b1.range<4,7>()
+       *  @endcode */
+       template<bool is_const_dummy = is_const>
+        typename std::enable_if<is_const_dummy == false, parent_type>::type
+        operator~()
+      {
+        parent_type tmp = parent_;
+        for(size_t i=0; i<n_range_bits; ++i)
+          tmp[i] = ~(*this)[i];
+        return tmp;
       }
 
       //! Convert the bitfield to a number
@@ -257,16 +317,38 @@ namespace bitfield_private
 
       //! Access an element of the range
       template<bool is_const_dummy = is_const>
-      typename std::enable_if<is_const_dummy == false, bool &>::type
+        typename std::enable_if<is_const_dummy == false, typename std::bitset<parent_bits>::reference>::type
         operator[](size_t i)
       {
-          return parent_.b_[e-i];
+        if((i + b) > e )
+          throw std::invalid_argument("Trying to access outside of range");
+        return parent_.b_[b+i];
       }
 
       //! Access an element of the range (const version)
       bool operator[](size_t i) const
       {
-          return parent_.b_[e-i];
+        if((i + b) > e )
+          throw std::invalid_argument("Trying to access outside of range");
+        return parent_.b_[b+i];
+      }
+
+      //sign extend given range to parent_bits size and return new bitfield
+      parent_type sign_ext()
+      {
+        parent_type tmp = parent_;
+        for(size_t i = (e+1); i < parent_bits; ++i)
+          tmp[i] = (*this)[e];
+        return tmp;
+      }
+
+      //zero extend given range to parent_bits size and return new bitfield
+      parent_type zero_ext()
+      {
+        parent_type tmp = parent_;
+        for(size_t i = (e+1); i < parent_bits; ++i)
+          tmp[i] = 0;
+        return tmp;
       }
 
       parent_type parent_;

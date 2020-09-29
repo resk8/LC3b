@@ -13,10 +13,9 @@
 #endif
 
 /*
-* //TODO
+* TODO
 */
-Latch::Latch(PipeLine & instance) : 
-_pipe(instance),
+Latch::Latch() : 
 NPC(0),
 DATA(0),
 SR1(0),
@@ -35,7 +34,7 @@ SR_CS(0)
 }
 
 /*
-* //TODO
+* TODO
 */
 void Latch::operator=(const Latch & latch)
 {

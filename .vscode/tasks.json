@@ -19,7 +19,7 @@
         {
             "type": "shell",
             "label": "Linux clean",
-            "command": "cd build ; mingw32-make clean; cd ..",
+            "command": "cd build ; make clean; cd ..",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

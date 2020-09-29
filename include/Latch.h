@@ -5,16 +5,13 @@
     #include "LC3b.h"
 #endif
 
-class PipeLine;
-
 class Latch
 {
     public:
-    Latch(PipeLine & instance);
+    Latch();
     ~Latch(){}
 
-    PipeLine & pipeline() { return _pipe; }    
-    void operator=(const Latch & latch);    
+    void operator=(const Latch & latch);
 
     //TODO: make some getters?
     bits16 NPC;
@@ -33,7 +30,4 @@ class Latch
     agex_cs_bits AGEX_CS;
     mem_cs_bits MEM_CS;
     sr_cs_bits SR_CS;
-
-    private:
-    PipeLine & _pipe;
 };

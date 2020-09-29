@@ -20,11 +20,11 @@
 /*
 * Simulator constructor
 */
-Simulator::Simulator() : 
-CYCLE_COUNT(0), 
+Simulator::Simulator() :
+CYCLE_COUNT(0),
 RUN_BIT(0)
 {
-  CpuPipeline = std::make_shared<PipeLine>(*this); 
+  CpuPipeline = std::make_shared<PipeLine>(*this);
   CpuMemory = std::make_shared<MainMemory>(*this);
   CpuState = std::make_shared<State>(*this);
   CpuMicroSequencer = std::make_shared<MicroSequencer>(*this);
@@ -37,7 +37,7 @@ RUN_BIT(0)
 /* Purpose   : Print out a list of commands.                   */
 /*                                                             */
 /***************************************************************/
-void Simulator::help() 
+void Simulator::help()
 {
     printf("----------------LC-3bSIM Help-----------------------\n");
     printf("go               -  run program to completion       \n");
@@ -57,8 +57,8 @@ void Simulator::help()
 /* Purpose   : Execute a cycle                                 */
 /*                                                             */
 /***************************************************************/
-void Simulator::cycle() 
-{  
+void Simulator::cycle()
+{
   pipeline().PropagatePipeLine();
   CYCLE_COUNT++;
 }
@@ -70,18 +70,18 @@ void Simulator::cycle()
 /* Purpose   : Simulate the LC-3b for n cycles.                 */
 /*                                                             */
 /***************************************************************/
-void Simulator::run(int num_cycles) 
+void Simulator::run(int num_cycles)
 {
-  if (RUN_BIT == FALSE) 
+  if (RUN_BIT == FALSE)
   {
     printf("Can't simulate, Simulator is halted\n\n");
   return;
   }
 
   printf("Simulating for %d cycles...\n\n", num_cycles);
-  for (auto i = 0; i < num_cycles; i++) 
+  for (auto i = 0; i < num_cycles; i++)
   {
-    if (state().GetProgramCounter().to_num() == 0x0000) 
+    if (state().GetProgramCounter().to_num() == 0x0000)
     {
       cycle();
       RUN_BIT = FALSE;
@@ -99,14 +99,14 @@ void Simulator::run(int num_cycles)
 /* Purpose   : Simulate the LC-3b until HALTed.                 */
 /*                                                             */
 /***************************************************************/
-void Simulator::go() 
+void Simulator::go()
 {
-  if ((RUN_BIT == FALSE) || (state().GetProgramCounter().to_num() == 0x0000)) 
+  if ((RUN_BIT == FALSE) || (state().GetProgramCounter().to_num() == 0x0000))
   {
 	  printf("Can't simulate, Simulator is halted\n\n");
 	  return;
   }
-  
+
   printf("Simulating...\n\n");
   /* initialization */
   while (state().GetProgramCounter().to_num() != 0x0000)
@@ -123,10 +123,10 @@ void Simulator::go()
 /*                                                             */
 /* Procedure : get_command                                     */
 /*                                                             */
-/* Purpose   : Read a command from standard input.             */  
+/* Purpose   : Read a command from standard input.             */
 /*                                                             */
 /***************************************************************/
-void Simulator::get_command(FILE * dumpsim_file) 
+void Simulator::get_command(FILE * dumpsim_file)
 {
   char buffer[20];
   uint16_t start, stop, cycles;
@@ -135,7 +135,7 @@ void Simulator::get_command(FILE * dumpsim_file)
   scanf("%s", buffer);
   printf("\n");
 
-  switch(buffer[0]) 
+  switch(buffer[0])
   {
     case 'G':
     case 'g':
@@ -159,7 +159,7 @@ void Simulator::get_command(FILE * dumpsim_file)
       {
         state().rdump(dumpsim_file);
       }
-      else 
+      else
       {
         scanf("%d", &cycles);
         run(cycles);
@@ -182,13 +182,13 @@ void Simulator::get_command(FILE * dumpsim_file)
 /* Purpose   : Load program and service routines into mem.    */
 /*                                                            */
 /**************************************************************/
-void Simulator::load_program(char *program_filename) 
+void Simulator::load_program(char *program_filename)
 {
-  bits16 program_base; uint16_t word; 
+  int program_base; int word;
 
   /* Open program file. */
   auto prog = fopen(program_filename, "r");
-  if (prog == NULL) 
+  if (prog == NULL)
   {
     printf("Error: Can't open program file %s\n", program_filename);
     Exit();
@@ -199,18 +199,18 @@ void Simulator::load_program(char *program_filename)
   {
     program_base = word >> 1 ;
   }
-  else 
+  else
   {
     printf("Error: Program file is empty\n");
     Exit();
   }
 
   auto ii = 0;
-  while (fscanf(prog, "%x\n", &word) != EOF) 
+  while (fscanf(prog, "%x\n", &word) != EOF)
   {
     /* Make sure it fits. */
     auto program_memory = program_base + ii;
-    if (program_memory.to_num() >= WORDS_IN_MEM) 
+    if (program_memory >= WORDS_IN_MEM)
     {
       printf("Error: Program file %s is too long to fit in memory. %x\n", program_filename, ii);
       Exit();
@@ -223,11 +223,11 @@ void Simulator::load_program(char *program_filename)
     ii++;
   }
 
-  if (state().GetProgramCounter().to_num() == 0) 
+  if (state().GetProgramCounter().to_num() == 0)
   {
     state().SetProgramCounter(program_base << 1);
   }
-  
+
   printf("Read %d words from program into memory.\n\n", ii);
 }
 
@@ -235,23 +235,23 @@ void Simulator::load_program(char *program_filename)
 /*                                                             */
 /* Procedure : initialize                                      */
 /*                                                             */
-/* Purpose   : Load microprogram and machine language program  */ 
+/* Purpose   : Load microprogram and machine language program  */
 /*             and set up initial state of the machine.        */
 /*                                                             */
 /***************************************************************/
-void Simulator::initialize(char *ucode_filename, char *program_filename, uint16_t num_prog_files) 
+void Simulator::initialize(char *ucode_filename, char *program_filename, uint16_t num_prog_files)
 {
   microsequencer().init_control_store(ucode_filename);
   memory().init_memory();
-  state().init_state(); 
+  state().init_state();
   pipeline().init_pipeline();
 
-  for (auto i = 0; i < num_prog_files; i++ ) 
+  for (auto i = 0; i < num_prog_files; i++ )
   {
 	  load_program(program_filename);
 	  while(*program_filename++ != '\0');
   }
-     
+
   RUN_BIT = TRUE;
 }
 

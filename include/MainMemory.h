@@ -1,5 +1,5 @@
 #include <vector>
-#ifdef __linux__ 
+#ifdef __linux__
     #include "../include/LC3b.h"
 #else
     #include "LC3b.h"
@@ -8,7 +8,7 @@
 /***************************************************************/
 /* Definition of the memory size.                              */
 /***************************************************************/
-#define WORDS_IN_MEM    0x08000 
+#define WORDS_IN_MEM    0x08000
 
 class Simulator;
 class MainMemory
@@ -34,9 +34,9 @@ class MainMemory
   /* Main memory.                                                */
   /***************************************************************/
   /* MEMORY[A][0] stores the least significant byte of word at word address A
-   MEMORY[A][1] stores the most significant byte of word at word address A 
-   There are two write enable signals, one for each byte. WE0 is used for 
-   the least significant byte of a word. WE1 is used for the most significant 
+   MEMORY[A][1] stores the most significant byte of word at word address A
+   There are two write enable signals, one for each byte. WE0 is used for
+   the least significant byte of a word. WE1 is used for the most significant
    byte of a word. */
   std::vector<std::vector<bits8>> MEMORY;
 };
