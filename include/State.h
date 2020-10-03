@@ -81,7 +81,7 @@ class State
   bool GetNBit() const { return N; };
   bool GetPBit() const { return P; };
   bool GetZBit() const { return Z; };
-  bits3 GetNZP(bool load_new_nzp);
+  bits3 GetNZP();
   void SetDataForRegister(const bits3 & reg, const bits16 & data);
   bits16 GetRegisterData(const bits3 & reg) const;
   void rdump(FILE * dumpsim_file);

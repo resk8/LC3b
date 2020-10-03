@@ -439,33 +439,33 @@ void PipeLine::SR_stage()
   SetStage(STORE);
   auto & micro_sequencer =  simulator().microsequencer();
   auto & sr_sig = simulator().state().SrSignals();
-  auto & store_signals = latch(STORE,PS);
+  auto & store_latch = latch(STORE,PS);
   /* You are given the code for SR_stage to get you started. Look at
      the figure for store_signals stage to see how this code is implemented. */
 
-  switch (micro_sequencer.Get_DR_VALUEMUX1(store_signals.SR_CS).to_num())
+  switch (micro_sequencer.Get_DR_VALUEMUX1(store_latch.SR_CS).to_num())
   {
   case 0:
-    sr_sig.sr_reg_data = store_signals.ADDRESS ;
+    sr_sig.sr_reg_data = store_latch.ADDRESS ;
     break;
   case 1:
-    sr_sig.sr_reg_data = store_signals.DATA ;
+    sr_sig.sr_reg_data = store_latch.DATA ;
     break;
   case 2:
-    sr_sig.sr_reg_data = store_signals.NPC ;
+    sr_sig.sr_reg_data = store_latch.NPC ;
     break;
   case 3:
-    sr_sig.sr_reg_data = store_signals.ALU_RESULT ;
+    sr_sig.sr_reg_data = store_latch.ALU_RESULT ;
     break;
   }
 
-  sr_sig.sr_drid = store_signals.DRID;
-  sr_sig.v_sr_ld_reg = micro_sequencer.Get_SR_LD_REG(store_signals.SR_CS) & store_signals.V;
-  sr_sig.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(store_signals.SR_CS) & store_signals.V ;
+  sr_sig.sr_drid = store_latch.DRID;
+  sr_sig.v_sr_ld_reg = micro_sequencer.Get_SR_LD_REG(store_latch.SR_CS) & store_latch.V;
+  sr_sig.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(store_latch.SR_CS) & store_latch.V ;
 
   /* CC LOGIC  */
   sr_sig.sr_n = sr_sig.sr_reg_data[15];
-  sr_sig.sr_z = ((sr_sig.sr_reg_data.to_num() & 0xFFFF) ? 0 : 1);
+  sr_sig.sr_z = ((sr_sig.sr_reg_data.to_num() == 0) ? 1 : 0);
   sr_sig.sr_p = ((!sr_sig.sr_n) && (!sr_sig.sr_z));
 }
 
@@ -478,10 +478,11 @@ void PipeLine::MEM_stage()
   auto & main_memory = simulator().memory();
   auto & memory_sig = simulator().state().MemSignals();
   auto & stall_sig = simulator().state().Stall();
+  auto & micro_seq = simulator().microsequencer();
 
   //access aligment logic
   auto alignment_needed = memory_latch.ADDRESS[0];
-  auto data_size = memory_latch.MEM_CS[MEM_DATA_SIZE];
+  auto data_size = micro_seq.Get_DATA_SIZE(memory_latch.MEM_CS);
   bits16 MDR_IN;
   if(!data_size) //byte access
   {
@@ -501,7 +502,7 @@ void PipeLine::MEM_stage()
     MDR_IN = memory_latch.ALU_RESULT;
 
   //read/write enable logic
-  auto read_write_en = memory_latch.MEM_CS[MEM_DCACHE_RW];
+  auto read_write_en = micro_seq.Get_DCACHE_RW(memory_latch.MEM_CS);
   auto we_high = 0, we_low = 0;
   if(read_write_en)
   {
@@ -523,18 +524,23 @@ void PipeLine::MEM_stage()
   //data cache access
   bits16 MDR_OUT;
   bool data_cache_r = false;
-  auto cache_en = memory_latch.MEM_CS[MEM_DCACHE_EN] && memory_latch.V;
+  auto cache_en = micro_seq.Get_DCACHE_EN(memory_latch.MEM_CS) && memory_latch.V;
   if(cache_en)
     main_memory.dcache_access(memory_latch.ADDRESS, MDR_OUT, MDR_IN, data_cache_r, we_low, we_high);
   else
     data_cache_r = true; //no stall since memory was not even accessed
 
+  //memory signals for fetch stage
+  memory_sig.target_pc = memory_latch.ADDRESS;
+  memory_sig.mem_drid = memory_latch.DRID;
+  stall_sig.mem_stall = cache_en && (!data_cache_r);
+
   //Branch Logic
   auto memory_v = memory_latch.V;
   if(memory_v)
   {
-    auto is_branch_op = memory_latch.MEM_CS[MEM_BR_OP];
-    auto is_trap_op = memory_latch.MEM_CS[MEM_TRAP_OP];
+    auto is_branch_op = micro_seq.Get_BR_OP(memory_latch.MEM_CS);
+    auto is_trap_op = micro_seq.Get_TRAP_OP(memory_latch.MEM_CS);
     if(is_branch_op)
     {
       bits3 br_intr_nzp = memory_latch.IR.range<11,9>();
@@ -554,21 +560,6 @@ void PipeLine::MEM_stage()
   else
     memory_sig.mem_pc_mux = 0; //memory not valid
 
-    //check for dependencies
-  if (memory_v)
-  {
-    memory_sig.v_mem_ld_cc = memory_latch.MEM_CS[MEM_LD_CC];
-    memory_sig.v_mem_ld_reg = memory_latch.MEM_CS[MEM_LD_REG];
-    stall_sig.v_mem_br_stall = memory_latch.MEM_CS[MEM_BR_STALL];
-  }
-  else
-    memory_sig.v_mem_ld_cc = memory_sig.v_mem_ld_reg = stall_sig.v_mem_br_stall = 0;
-
-  //memory signals for fetch stage
-  memory_sig.target_pc = memory_latch.ADDRESS;
-  memory_sig.mem_drid = memory_latch.DRID;
-  stall_sig.mem_stall = cache_en && (!data_cache_r);
-
   //process trap
   memory_sig.trap_pc = 0;
   if(cache_en)
@@ -585,9 +576,19 @@ void PipeLine::MEM_stage()
 
       memory_sig.trap_pc.range<7,0>() = trap_byte.range<7,0>();
       if(memory_sig.trap_pc[7])
-        memory_sig.trap_pc = memory_sig.trap_pc.range<7,0>().sign_ext();
+        memory_sig.trap_pc = memory_sig.trap_pc.sign_ext(7);
     }
   }
+
+  //check for dependencies
+  if (memory_v)
+  {
+    memory_sig.v_mem_ld_cc = micro_seq.Get_MEM_LD_CC(memory_latch.MEM_CS);
+    memory_sig.v_mem_ld_reg = micro_seq.Get_MEM_LD_REG(memory_latch.MEM_CS);
+    stall_sig.v_mem_br_stall = micro_seq.Get_MEM_BR_STALL(memory_latch.MEM_CS);
+  }
+  else
+    memory_sig.v_mem_ld_cc = memory_sig.v_mem_ld_reg = stall_sig.v_mem_br_stall = 0;
 
   //load SR latch
   store_latch.ADDRESS = memory_latch.ADDRESS;
@@ -612,11 +613,12 @@ void PipeLine::AGEX_stage()
   auto & agex_latch = latch(AGEX,PS);
   auto & agex_sig = simulator().state().AgexSignals();
   auto & stall_sig = simulator().state().Stall();
+  auto & micro_seq = simulator().microsequencer();
 
   /* your code for agex_sigs stage goes here */
   // First program counter mux
   bits16 next_pc_1;
-  if(agex_latch.AGEX_CS[AGEX_ADDR1MUX])
+  if(micro_seq.Get_ADDR1MUX(agex_latch.AGEX_CS))
     next_pc_1 = agex_latch.SR1;
   else
     next_pc_1 = agex_latch.NPC;
@@ -624,50 +626,50 @@ void PipeLine::AGEX_stage()
   // second program counter mux
   // TODO: this might be broken because of the bit access to non_const overload
   bits16 next_pc_2;
-  auto agex_addr2mux = (agex_latch.AGEX_CS[AGEX_ADDR2MUX1] << 1) + (agex_latch.AGEX_CS[AGEX_ADDR2MUX0]);
-  switch (agex_addr2mux)
+  auto agex_addr2mux = micro_seq.Get_ADDR2MUX(agex_latch.AGEX_CS);
+  switch (agex_addr2mux.to_num())
   {
   case 0:
     next_pc_2 = 0;
     break;
   case 1:
-    next_pc_2 = agex_latch.IR.range<5,0>().sign_ext();
+    next_pc_2 = agex_latch.IR.sign_ext(5);
     break;
   case 2:
-    next_pc_2 = agex_latch.IR.range<8,0>().sign_ext();
+    next_pc_2 = agex_latch.IR.sign_ext(8);
     break;
   case 3:
-    next_pc_2 = agex_latch.IR.range<10,0>().sign_ext();
+    next_pc_2 = agex_latch.IR.sign_ext(10);
     break;
   default:
     assert(true); //TODO: should not happen. add an exception?
   }
 
   //check if lshf1 signal is 1
-  if(agex_latch.AGEX_CS[LSHF1])
+  if(micro_seq.Get_LSHF1(agex_latch.AGEX_CS))
     next_pc_2 = next_pc_2 << 1;
 
   //generate next instruction address
   bits16 mem_address;
-  if(agex_latch.AGEX_CS[AGEX_ADDRESSMUX])
+  if(micro_seq.Get_ADDRESSMUX(agex_latch.AGEX_CS))
     mem_address = next_pc_1 + next_pc_2;
   else
-    mem_address = agex_latch.IR.range<7,0>().zero_ext() << 1;
+    mem_address = agex_latch.IR.zero_ext(7) << 1;
 
   //Shifter or ALU generation
   bits16 alu_shifter_output;
-  if(agex_latch.AGEX_CS[AGEX_ALU_RESULTMUX]) //ALU operation
+  if(micro_seq.Get_ALU_RESULTMUX(agex_latch.AGEX_CS)) //ALU operation
   {
     //determine the second input to the ALU
     bits16 input2;
-    if(agex_latch.AGEX_CS[AGEX_SR2MUX])
-        input2 = agex_latch.IR.range<4,0>().sign_ext();
+    if(micro_seq.Get_SR2MUX(agex_latch.AGEX_CS))
+        input2 = agex_latch.IR.sign_ext(4);
     else
         input2 = agex_latch.SR2;
 
     //perfom the operation based on the micro code of the current instruction
-    auto aluk = (agex_latch.AGEX_CS[AGEX_ALUK1] << 1) + agex_latch.AGEX_CS[AGEX_ALUK0];
-    switch(aluk)
+    auto aluk = micro_seq.Get_ALUK(agex_latch.AGEX_CS);
+    switch(aluk.to_num())
     {
       case 0:
         alu_shifter_output = agex_latch.SR1 + input2;
@@ -723,9 +725,9 @@ void PipeLine::AGEX_stage()
   //check for dependencies
   if (agex_latch.V)
   {
-    agex_sig.v_agex_ld_cc = agex_latch.AGEX_CS[AGEX_LD_CC];
-    agex_sig.v_agex_ld_reg = agex_latch.AGEX_CS[AGEX_LD_REG];
-    stall_sig.v_agex_br_stall = agex_latch.AGEX_CS[AGEX_BR_STALL];
+    agex_sig.v_agex_ld_cc = micro_seq.Get_AGEX_LD_CC(agex_latch.AGEX_CS);
+    agex_sig.v_agex_ld_reg = micro_seq.Get_AGEX_LD_REG(agex_latch.AGEX_CS);
+    stall_sig.v_agex_br_stall = micro_seq.Get_AGEX_BR_STALL(agex_latch.AGEX_CS);
   }
   else
     agex_sig.v_agex_ld_cc = agex_sig.v_agex_ld_reg = stall_sig.v_agex_br_stall = 0;
@@ -780,7 +782,7 @@ void PipeLine::DE_stage()
   //Condition code N is stored in agex_sigs.CC[2], Z is stored in agex_sigs.CC[1], and P is stored in
   //agex_sigs.CC[0]. Note that the condition codes and register file are read and the values
   //obtained are latched regardless of whether an instruction needs these values.
-  de_sig.de_npc = cpu_state.GetNZP(cpu_state.SrSignals().v_sr_ld_cc);
+  de_sig.de_npc = cpu_state.GetNZP();
 
   //Dependency check logic indicates whether or not the instruction in the decode_sigs stage should
   //be propagated forward. If DEP.STALL is asserted, the state of the decode_sigs latches should
@@ -861,10 +863,14 @@ void PipeLine::FETCH_stage()
 
   //if there are no stalls or control instructions in the pipeline,
   //the PC should be incremented by 2.
+  auto decode_valid = true;
   if(!IsStallDetected())
   {
     cpu_state.SetProgramCounter(new_pc);
   }
+  else
+    decode_valid = false;
+
 
   //do not latch the decode_sigs in case there is a data stall or dependency stall
   auto ld_de = (stall.dep_stall || stall.mem_stall) ? 0 : 1;
@@ -875,6 +881,6 @@ void PipeLine::FETCH_stage()
 
     //decode_sigs.valid is 0 if stall was detected or a branch
     //was not taken. Ohterwise, stage is good to go
-    decode_latch.V = (!ld_de || stall.v_mem_br_stall) ? 0 : 1;
+    decode_latch.V = decode_valid;
   }
 }

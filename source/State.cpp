@@ -19,8 +19,8 @@
 /* Purpose   : Zero out all signals and registers              */
 /*                                                             */
 /***************************************************************/
-void State::init_state() 
-{  
+void State::init_state()
+{
   PC = 0;
   N = P = 0;
   Z = 1;
@@ -36,8 +36,9 @@ void State::init_state()
 /*
 * Return the current N Z P bits and loads a new nzp value from SR stage into N Z P
 */
-bits3 State::GetNZP(bool load_new_nzp)
+bits3 State::GetNZP()
 {
+  auto & store_sigs = SrSignals();
   auto nzp = bits3(0);
   nzp[2] = GetNBit();
   nzp[1] = GetZBit();
@@ -45,13 +46,13 @@ bits3 State::GetNZP(bool load_new_nzp)
 
   //load new nzp bits into cpu
   //nzp from the store stage
-  if(load_new_nzp)
+  if(store_sigs.v_sr_ld_cc)
   {
     N = store_sigs.sr_n;
     Z = store_sigs.sr_z;
     P = store_sigs.sr_p;
   }
-  
+
   return nzp;
 }
 
@@ -69,7 +70,7 @@ void State::SetDataForRegister(const bits3 & reg, const bits16 & data)
     printf("\n********* C++ exception *********\n");
     printf("Error: Invalid Register: reg=%d\n",reg);
     printf("C++ error code : %s\n",oor.what());
-    Exit();  
+    Exit();
   }
 }
 
@@ -87,7 +88,7 @@ bits16 State::GetRegisterData(const bits3 & reg) const
     printf("\n********* C++ exception *********\n");
     printf("Error: Invalid Register: reg=%d\n",reg);
     printf("C++ error code : %s\n",oor.what());
-    Exit();  
+    Exit();
   }
 }
 
@@ -95,12 +96,12 @@ bits16 State::GetRegisterData(const bits3 & reg) const
 /*                                                             */
 /* Procedure : rdump                                           */
 /*                                                             */
-/* Purpose   : Dump current architectural state  to the       */   
+/* Purpose   : Dump current architectural state  to the       */
 /*             output file.                                    */
 /*                                                             */
 /***************************************************************/
-void State::rdump(FILE * dumpsim_file) 
-{  
+void State::rdump(FILE * dumpsim_file)
+{
   printf("\nCurrent architectural state :\n");
   printf("-------------------------------------\n");
   printf("Cycle Count : %d\n", simulator().GetCycles());
@@ -111,7 +112,7 @@ void State::rdump(FILE * dumpsim_file)
   {
 	  printf("%d: 0x%04x\n", k, GetRegisterData(k).to_num());
   }
-  
+
   printf("\n");
 
   /* dump the state information into the dumpsim file */

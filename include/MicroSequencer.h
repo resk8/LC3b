@@ -1,5 +1,5 @@
 #include <vector>
-#ifdef __linux__ 
+#ifdef __linux__
     #include "../include/LC3b.h"
 #else
     #include "LC3b.h"
@@ -31,7 +31,7 @@ class MicroSequencer
   bool Get_SR1_NEEDED(const cs_bits & x) const         { return (x[SR1_NEEDED]); }
   bool Get_SR2_NEEDED(const cs_bits & x) const         { return (x[SR2_NEEDED]); }
   bool Get_DRMUX(const cs_bits & x) const              { return (x[DRMUX]);}
-  bool Get_DE_BR_OP(const cs_bits & x) const           { return (x[BR_OP]); } 
+  bool Get_DE_BR_OP(const cs_bits & x) const           { return (x[BR_OP]); }
   bool Get_ADDR1MUX(const agex_cs_bits & x) const      { return (x[AGEX_ADDR1MUX]); }
   bits2 Get_ADDR2MUX(const agex_cs_bits & x) const     { return ((x[AGEX_ADDR2MUX1] << 1) + x[AGEX_ADDR2MUX0]); }
   bool Get_LSHF1(const agex_cs_bits & x) const         { return (x[AGEX_LSHF1]); }
@@ -44,7 +44,7 @@ class MicroSequencer
   bool Get_TRAP_OP(const mem_cs_bits & x) const        { return (x[MEM_TRAP_OP]); }
   bool Get_DCACHE_EN(const mem_cs_bits & x) const      { return (x[MEM_DCACHE_EN]); }
   bool Get_DCACHE_RW(const mem_cs_bits & x) const      { return (x[MEM_DCACHE_RW]); }
-  bool Get_DATA_SIZE(const mem_cs_bits & x) const      { return (x[MEM_DATA_SIZE]); } 
+  bool Get_DATA_SIZE(const mem_cs_bits & x) const      { return (x[MEM_DATA_SIZE]); }
   bits2 Get_DR_VALUEMUX1(const sr_cs_bits & x) const   { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
   bool Get_AGEX_LD_REG(const agex_cs_bits & x) const   { return (x[AGEX_LD_REG]); }
   bool Get_AGEX_LD_CC(const agex_cs_bits & x) const    { return (x[AGEX_LD_CC]); }
@@ -55,12 +55,13 @@ class MicroSequencer
   bool Get_DE_BR_STALL(const cs_bits & x) const        { return (x[BR_STALL]); }
   bool Get_AGEX_BR_STALL(const agex_cs_bits & x) const { return (x[AGEX_BR_STALL]); }
   bool Get_MEM_BR_STALL(const mem_cs_bits & x) const   { return (x[MEM_BR_STALL]); }
-  
+
   void print_CS(const cs_bits & CS, int num) const;
-  
+  void cdump(FILE * dumpsim_file) const;
+
   private:
   Simulator & _simulator;
-  
+
   /***************************************************************/
   /* The control store rom.                                      */
   /***************************************************************/

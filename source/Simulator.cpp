@@ -45,6 +45,7 @@ void Simulator::help()
     printf("mdump low high   -  dump memory from low to high    \n");
     printf("rdump            -  dump the architectural state    \n");
     printf("idump            -  dump the internal state         \n");
+    printf("cdump            -  dump the control store state    \n");
     printf("?                -  display this help menu          \n");
     printf("quit             -  exit the program                \n\n");
 }
@@ -168,6 +169,10 @@ void Simulator::get_command(FILE * dumpsim_file)
     case 'I':
     case 'i':
       pipeline().idump(dumpsim_file);
+      break;
+    case 'C':
+    case 'c':
+      microsequencer().cdump(dumpsim_file);
       break;
     default:
       printf("Invalid Command\n");
