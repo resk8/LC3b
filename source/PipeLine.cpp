@@ -430,6 +430,7 @@ void PipeLine::PropagatePipeLine()
   AGEX_stage();
   DE_stage();
   FETCH_stage();
+  idump(simulator().dump_file);
   MoveLatch(PS,NEW_PS);
 }
 

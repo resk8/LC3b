@@ -68,7 +68,7 @@ void State::SetDataForRegister(const bits3 & reg, const bits16 & data)
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Invalid Register: reg=%d\n",reg);
+    printf("Error: Invalid Register: reg=%d\n",reg.to_num());
     printf("C++ error code : %s\n",oor.what());
     Exit();
   }
@@ -86,7 +86,7 @@ bits16 State::GetRegisterData(const bits3 & reg) const
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: Invalid Register: reg=%d\n",reg);
+    printf("Error: Invalid Register: reg=%d\n",reg.to_num());
     printf("C++ error code : %s\n",oor.what());
     Exit();
   }

@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
   printf("LC-3b Simulator\n\n");
   Simulator.initialize(argv[1], argv[2], argc - 2);
 
-  if ( (dumpsim_file = fopen( "dumpsim.txt", "w" )) == NULL ) 
+  if ( (Simulator.dump_file = fopen( "dumpsim.txt", "w" )) == NULL ) 
   {
 	  printf("Error: Can't open dumpsim file\n");
 	  Exit();
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
   while (1)
   {
-	  Simulator.get_command(dumpsim_file);
+	  Simulator.get_command();
   }
 }
 

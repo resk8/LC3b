@@ -22,7 +22,8 @@
 */
 Simulator::Simulator() :
 CYCLE_COUNT(0),
-RUN_BIT(0)
+RUN_BIT(0),
+dump_file(nullptr)
 {
   CpuPipeline = std::make_shared<PipeLine>(*this);
   CpuMemory = std::make_shared<MainMemory>(*this);
@@ -127,7 +128,7 @@ void Simulator::go()
 /* Purpose   : Read a command from standard input.             */
 /*                                                             */
 /***************************************************************/
-void Simulator::get_command(FILE * dumpsim_file)
+void Simulator::get_command()
 {
   char buffer[20];
   uint16_t start, stop, cycles;
@@ -145,7 +146,7 @@ void Simulator::get_command(FILE * dumpsim_file)
     case 'M':
     case 'm':
       scanf("%i %i", &start, &stop);
-      memory().mdump(dumpsim_file, start, stop);
+      memory().mdump(dump_file, start, stop);
       break;
     case '?':
       help();
@@ -158,7 +159,7 @@ void Simulator::get_command(FILE * dumpsim_file)
     case 'r':
       if (buffer[1] == 'd' || buffer[1] == 'D')
       {
-        state().rdump(dumpsim_file);
+        state().rdump(dump_file);
       }
       else
       {
@@ -168,11 +169,11 @@ void Simulator::get_command(FILE * dumpsim_file)
       break;
     case 'I':
     case 'i':
-      pipeline().idump(dumpsim_file);
+      pipeline().idump(dump_file);
       break;
     case 'C':
     case 'c':
-      microsequencer().cdump(dumpsim_file);
+      microsequencer().cdump(dump_file);
       break;
     default:
       printf("Invalid Command\n");

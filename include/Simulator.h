@@ -25,12 +25,14 @@ class Simulator
   void cycle();
   void run(int num_cycles);
   void go();
-  void idump(FILE * dumpsim_file);
-  void get_command(FILE * dumpsim_file);  
+  void get_command();  
   void load_program(char *program_filename);
   void initialize(char *ucode_filename, char *program_filename, uint16_t num_prog_files);
   int  GetCycles() const { return CYCLE_COUNT; }
   bool GetRunBit() const { return RUN_BIT; }
+
+  //HACK
+  FILE* dump_file;
 
   private:
   std::shared_ptr<MainMemory> CpuMemory;

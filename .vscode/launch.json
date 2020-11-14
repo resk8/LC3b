@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "(lldb) Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/source/lC3b",
@@ -13,9 +13,8 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/doc/test",
             "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "miDebuggerPath": "/usr/bin/gdb",
+            "externalConsole": true,
+            "MIMode": "lldb",
             "preLaunchTask": "Linux Build",
             "setupCommands": [
                 {
