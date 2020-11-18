@@ -869,9 +869,6 @@ void PipeLine::FETCH_stage()
   {
     cpu_state.SetProgramCounter(new_pc);
   }
-  else
-    decode_valid = false;
-
 
   //do not latch the decode_sigs in case there is a data stall or dependency stall
   auto ld_de = (stall.dep_stall || stall.mem_stall) ? 0 : 1;
@@ -882,6 +879,6 @@ void PipeLine::FETCH_stage()
 
     //decode_sigs.valid is 0 if stall was detected or a branch
     //was not taken. Ohterwise, stage is good to go
-    decode_latch.V = decode_valid;
+    decode_latch.V = stall.icache_r && !(stall.v_de_br_stall || stall.v_agex_br_stall || stall.v_mem_br_stall);
   }
 }
