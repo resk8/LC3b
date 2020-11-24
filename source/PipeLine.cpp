@@ -546,9 +546,9 @@ void PipeLine::MEM_stage()
     {
       bits3 br_intr_nzp = memory_latch.IR.range<11,9>();
       bits3 cpu_nzp = memory_latch.CC;
-      if((br_intr_nzp[2] == cpu_nzp[2]) || // N
-         (br_intr_nzp[1] == cpu_nzp[1]) || // Z
-         (br_intr_nzp[0] == cpu_nzp[0]))   // P
+      if(((br_intr_nzp[2] & cpu_nzp[2]) == 1) || // N
+         ((br_intr_nzp[1] & cpu_nzp[1]) == 1) || // Z
+         ((br_intr_nzp[0] & cpu_nzp[0]) == 1))   // P
          {
            memory_sig.mem_pc_mux = 1; //branch taken, jump to target PC
          }
@@ -582,14 +582,9 @@ void PipeLine::MEM_stage()
   }
 
   //check for dependencies
-  if (memory_v)
-  {
-    memory_sig.v_mem_ld_cc = micro_seq.Get_MEM_LD_CC(memory_latch.MEM_CS);
-    memory_sig.v_mem_ld_reg = micro_seq.Get_MEM_LD_REG(memory_latch.MEM_CS);
-    stall_sig.v_mem_br_stall = micro_seq.Get_MEM_BR_STALL(memory_latch.MEM_CS);
-  }
-  else
-    memory_sig.v_mem_ld_cc = memory_sig.v_mem_ld_reg = stall_sig.v_mem_br_stall = 0;
+  memory_sig.v_mem_ld_cc = memory_v && micro_seq.Get_MEM_LD_CC(memory_latch.MEM_CS);
+  memory_sig.v_mem_ld_reg = memory_v && micro_seq.Get_MEM_LD_REG(memory_latch.MEM_CS);
+  stall_sig.v_mem_br_stall = memory_v && micro_seq.Get_MEM_BR_STALL(memory_latch.MEM_CS);
 
   //load SR latch
   store_latch.ADDRESS = memory_latch.ADDRESS;
@@ -722,16 +717,9 @@ void PipeLine::AGEX_stage()
 
   //set signals needed for previous stage
   agex_sig.agex_drid = agex_latch.DRID;
-
-  //check for dependencies
-  if (agex_latch.V)
-  {
-    agex_sig.v_agex_ld_cc = micro_seq.Get_AGEX_LD_CC(agex_latch.AGEX_CS);
-    agex_sig.v_agex_ld_reg = micro_seq.Get_AGEX_LD_REG(agex_latch.AGEX_CS);
-    stall_sig.v_agex_br_stall = micro_seq.Get_AGEX_BR_STALL(agex_latch.AGEX_CS);
-  }
-  else
-    agex_sig.v_agex_ld_cc = agex_sig.v_agex_ld_reg = stall_sig.v_agex_br_stall = 0;
+  agex_sig.v_agex_ld_cc = agex_latch.V && micro_seq.Get_AGEX_LD_CC(agex_latch.AGEX_CS);
+  agex_sig.v_agex_ld_reg = agex_latch.V && micro_seq.Get_AGEX_LD_REG(agex_latch.AGEX_CS);
+  stall_sig.v_agex_br_stall = agex_latch.V && micro_seq.Get_AGEX_BR_STALL(agex_latch.AGEX_CS);
 
   //Stall check
   auto LD_MEM = (stall_sig.mem_stall) ? 0 : 1;
@@ -763,7 +751,7 @@ void PipeLine::DE_stage()
   auto & micro_sequencer = simulator().microsequencer();
   auto & decode_latch = latch(DECODE,PS);
   auto & agex_latch = latch(AGEX,NEW_PS);
-  auto CONTROL_STORE_ADDRESS = bitfield<6>(0);
+  bitfield<6> CONTROL_STORE_ADDRESS;
 
   //get micro code state
   CONTROL_STORE_ADDRESS.range<5,1>() = decode_latch.IR.range<15,11>();
@@ -800,7 +788,7 @@ void PipeLine::DE_stage()
   //in the decode_sigs stage is a valid control instruction. The decode_sigs.BR.STALL signal is used to insert
   //bubbles into the pipeline in the F stage
   stall.v_de_br_stall = decode_latch.V && micro_sequencer.Get_DE_BR_STALL(de_sig.de_ucode);
-
+  
   //if mem stage is already stalled dont change the state of mem latch
   auto LD_AGEX = (stall.mem_stall) ? 0 : 1;
   if (LD_AGEX)
@@ -864,8 +852,8 @@ void PipeLine::FETCH_stage()
 
   //if there are no stalls or control instructions in the pipeline,
   //the PC should be incremented by 2.
-  auto decode_valid = true;
-  if(!IsStallDetected())
+  auto load_pc = !IsStallDetected();
+  if(load_pc)
   {
     cpu_state.SetProgramCounter(new_pc);
   }
@@ -879,6 +867,6 @@ void PipeLine::FETCH_stage()
 
     //decode_sigs.valid is 0 if stall was detected or a branch
     //was not taken. Ohterwise, stage is good to go
-    decode_latch.V = stall.icache_r && !(stall.v_de_br_stall || stall.v_agex_br_stall || stall.v_mem_br_stall);
+    decode_latch.V = (!load_pc || stall.v_mem_br_stall) ? 0 : 1;
   }
 }
