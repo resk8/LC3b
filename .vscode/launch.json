@@ -6,22 +6,13 @@
     "configurations": [
         {
             "name": "(lldb) Launch",
-            "type": "cppdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/source/lC3b",
-            "args": ["ucode6","exemple1.obj"],
-            "stopAtEntry": false,
+            "args": ["ucode6","exemple1.obj"],            
             "cwd": "${workspaceFolder}/doc/test",
-            "environment": [],
-            "externalConsole": true,
-            "MIMode": "lldb",
             "preLaunchTask": "Linux Build",
-            "setupCommands": [
-                {
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
+            "expressions":"native",
         }
     ]
 }

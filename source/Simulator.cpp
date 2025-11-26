@@ -2,7 +2,6 @@
 /* Simulator Implementaion                                     */
 /***************************************************************/
 
-#include <iostream>
 #ifdef __linux__
     #include "../include/PipeLine.h"
     #include "../include/MainMemory.h"
@@ -140,7 +139,7 @@ void Simulator::get_command()
   switch(buffer[0])
   {
     case 'G':
-    case 'g':
+    case 'g': // Allow 'go'
       go();
       break;
     case 'M':
@@ -152,11 +151,11 @@ void Simulator::get_command()
       help();
       break;
     case 'Q':
-    case 'q':
+    case 'q': // Allow 'quit'
       printf("Bye.\n");
       exit(0);
     case 'R':
-    case 'r':
+    case 'r': // Distinguish 'rdump' from 'run'
       if (buffer[1] == 'd' || buffer[1] == 'D')
       {
         state().rdump(dump_file);
@@ -168,11 +167,11 @@ void Simulator::get_command()
       }
       break;
     case 'I':
-    case 'i':
+    case 'i': // Allow 'idump'
       pipeline().idump(dump_file);
       break;
     case 'C':
-    case 'c':
+    case 'c': // Allow 'cdump'
       microsequencer().cdump(dump_file);
       break;
     default:
@@ -260,4 +259,3 @@ void Simulator::initialize(char *ucode_filename, char *program_filename, uint16_
 
   RUN_BIT = TRUE;
 }
-

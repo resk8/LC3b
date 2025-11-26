@@ -2,7 +2,6 @@
 /* Latch Implementaion                                      */
 /***************************************************************/
 
-#include <iostream>
 #ifdef __linux__
     #include "../include/PipeLine.h"
     #include "../include/Latch.h"

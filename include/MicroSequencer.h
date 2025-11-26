@@ -1,3 +1,8 @@
+/***************************************************************/
+/* MicroSequencer.h: LC-3b MicroSequencer Class Header File    */
+/***************************************************************/
+#pragma once
+
 #include <vector>
 #ifdef __linux__
     #include "../include/LC3b.h"
@@ -45,7 +50,7 @@ class MicroSequencer
   bool Get_DCACHE_EN(const mem_cs_bits & x) const      { return (x[MEM_DCACHE_EN]); }
   bool Get_DCACHE_RW(const mem_cs_bits & x) const      { return (x[MEM_DCACHE_RW]); }
   bool Get_DATA_SIZE(const mem_cs_bits & x) const      { return (x[MEM_DATA_SIZE]); }
-  bits2 Get_DR_VALUEMUX1(const sr_cs_bits & x) const   { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
+  bits2 Get_DR_VALUEMUX(const sr_cs_bits & x) const    { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
   bool Get_AGEX_LD_REG(const agex_cs_bits & x) const   { return (x[AGEX_LD_REG]); }
   bool Get_AGEX_LD_CC(const agex_cs_bits & x) const    { return (x[AGEX_LD_CC]); }
   bool Get_MEM_LD_REG(const mem_cs_bits & x) const     { return (x[MEM_LD_REG]); }

@@ -1,8 +1,12 @@
 /***************************************************************/
+/* PipeLine.h: LC-3b Pipeline Class Header File                */
+/***************************************************************/
+#pragma once
+
+#include <stdio.h>
 #include <memory>
 #include <vector>
 #ifdef __linux__ 
-    #include <stdio.h>
     #include "../include/LC3b.h"
 #else
     #include "LC3b.h"

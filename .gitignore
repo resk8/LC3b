@@ -1,6 +1,7 @@
 # not relevant
-dumpsim.txt
+*.txt
 settings.json
+*.idx
 
 # Executables
 *.exe

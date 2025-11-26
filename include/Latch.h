@@ -1,6 +1,12 @@
+/***************************************************************/
+/* Latch.h: LC-3b Latch Class Header File                      */
+/***************************************************************/
+#pragma once
+
+#include <memory>
 #ifdef __linux__ 
-    #include <stdio.h>
     #include "../include/LC3b.h"
+    #include "../include/instruction.h"
 #else
     #include "LC3b.h"
 #endif
@@ -25,8 +31,8 @@ class Latch
     bits3 CC;
     bool V;
 
-    /*TODO: I hate this implementation of joining the cs bits
-    In the future, look into dependency injection pattern*/
+    // Control signals for the stage this latch feeds.
+    // These are properties of the stage, not the instruction itself.
     agex_cs_bits AGEX_CS;
     mem_cs_bits MEM_CS;
     sr_cs_bits SR_CS;

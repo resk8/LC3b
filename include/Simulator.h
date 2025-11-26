@@ -1,3 +1,8 @@
+/***************************************************************/
+/* Simulator.h: LC-3b Simulator Class Header File              */
+/***************************************************************/
+#pragma once
+
 #include<memory>
 #ifdef __linux__ 
     #include "../include/LC3b.h"

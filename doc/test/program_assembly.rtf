@@ -8,9 +8,9 @@
 
 \f0\fs26 \cf2 \cb3 \expnd0\expndtw0\kerning0
 ;This program counts from 10 to 0 .ORIG x3000\
-0x3000         LEA R0, TEN    ;0xE005 \
+0x3000         LEA R0, TEN    ;0xE005\
 0x3002         LDW R1, R0, #0 ;0x6200\
-0x3004 START ADDR1 R1, #\'ad1     ;0x127F\
+0x3004 START  ADDR R1, #-1    ;0x127F\
 0x3006         BRZ DONE       ;0x0401\
 0x3008          BR START      ;0x0FFD\
 0x300A  DONE  TRAP x25        ;0xF025\

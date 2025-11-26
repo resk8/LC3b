@@ -4,13 +4,11 @@
 //*********************************************************
 #pragma once
 
-#include <array>
+#include <cstdint>
 #include <type_traits>
 #include <stdexcept>
 #include <string>
-#include <algorithm>
 #include <bitset>
-#include <iostream>
 
 namespace bitfield_private
 {
@@ -263,7 +261,7 @@ namespace bitfield_private
       {
         native_range_type n(0);
         for(size_t i=0; i<n_range_bits; ++i)
-          if((*this)[i]) n += (0x01 << i);
+          if((*this)[i]) n += (0x1 << i);
 
         return n;
       }

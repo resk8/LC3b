@@ -2,7 +2,6 @@
 /* Operation Unit Implementaion                                */
 /***************************************************************/
 
-#include <iostream>
 #ifdef __linux__    
     #include "../include/Latch.h"
     #include "../include/OperationUnit.h"
@@ -11,8 +10,8 @@
     #include "OperationUnit.h"
 #endif
 
-//factory methods to generate the desired logic unit
-//TODO: add some way to identify which latch is being passed. Currently assume its always AGEX
+// factory methods to generate the desired logic unit
+// TODO: add some way to identify which latch is being passed. Currently assume its always AGEX
 std::unique_ptr<OperationUnit> OperationUnit::MakeUnit(Latch & latch)
 {   
     auto alu_result_mux = latch.AGEX_CS[AGEX_ALU_RESULTMUX];
@@ -42,4 +41,3 @@ Alu::Alu(bits16 source1, bits16 source2, bits2 control)
 {
 
 }
-

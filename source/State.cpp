@@ -2,7 +2,6 @@
 /* Cpu State Implementaion                                     */
 /***************************************************************/
 
-#include <iostream>
 #include <cstring>
 #ifdef __linux__
     #include "../include/Simulator.h"
@@ -28,8 +27,8 @@ void State::init_state()
 
   std::memset(&decode_sigs, 0, sizeof(PipeState_DE_stage_Struct));
   std::memset(&agex_sigs, 0, sizeof(PipeState_AGEX_stage_Struct));
-  std::memset(&memory_sigs, 0, sizeof(PipeState_MEM_stage_Struct));
-  std::memset(&store_sigs, 0,sizeof(PipeState_SR_stage_Struct));
+  std::memset(&memory_sigs, 0, sizeof(PipeState_MEMORY_stage_Struct));
+  std::memset(&store_sigs, 0,sizeof(PipeState_STORE_stage_Struct));
   std::memset(&stall_sigs, 0, sizeof(PipeState_Hazards_Struct));
 }
 

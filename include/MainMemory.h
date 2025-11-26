@@ -1,3 +1,8 @@
+/***************************************************************/
+/* MainMemory.h: LC-3b Main Memory Class Header File           */
+/***************************************************************/
+#pragma once
+
 #include <vector>
 #ifdef __linux__
     #include "../include/LC3b.h"

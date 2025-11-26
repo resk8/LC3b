@@ -2,7 +2,6 @@
 /* PipeLine Implementaion                                      */
 /***************************************************************/
 
-#include <iostream>
 #include <cstring>
 #include <assert.h>
 #ifdef __linux__
@@ -13,6 +12,8 @@
     #include "../include/Latch.h"
     #include "../include/OperationUnit.h"
     #include "../include/PipeLine.h"
+    //#include "../include/instruction.h"
+    #include "../include/Disassembler.h"
 #else
     #include "Simulator.h"
     #include "State.h"
@@ -21,6 +22,8 @@
     #include "Latch.h"
     #include "OperationUnit.h"
     #include "PipeLine.h"
+    //#include "instruction.h"
+    #include "Disassembler.h"
 #endif
 
 /*
@@ -60,173 +63,118 @@ void PipeLine::init_pipeline()
 /***************************************************************/
 void PipeLine::idump(FILE * dumpsim_file)
 {
+  // Helper macro to print to both terminal and file, removing redundancy.
+#define PRINT_AND_DUMP(...) \
+    do { \
+        printf(__VA_ARGS__); \
+        if (dumpsim_file) { fprintf(dumpsim_file, __VA_ARGS__); } \
+    } while (0)
+
   State & cpu_state = simulator().state();
 
-  printf("\nCurrent architectural state :\n");
-  printf("-------------------------------------\n");
-  printf("Cycle Count     : %d\n", simulator().GetCycles());
-  printf("CpuState.GetProgramCounter()              : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
-  printf("CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
-  printf("Registers:\n");
+  PRINT_AND_DUMP("\nCurrent architectural state :\n");
+  PRINT_AND_DUMP("-------------------------------------\n");
+  PRINT_AND_DUMP("Cycle Count     : %d\n", simulator().GetCycles());
+  PRINT_AND_DUMP("PC                : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
+  PRINT_AND_DUMP("CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
+  PRINT_AND_DUMP("Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
   {
-    printf("%d: 0x%04x\n", k, cpu_state.GetRegisterData(k).to_num());
+    PRINT_AND_DUMP("R%d: 0x%04x\n", k, cpu_state.GetRegisterData(k).to_num());
   }
+  PRINT_AND_DUMP("\n");
 
-  printf("\n");
-
-  printf("------------- Stall Signals -------------\n");
-  printf("ICACHE_R        :  %d\n", cpu_state.Stall().icache_r);
-  printf("DEP_STALL       :  %d\n", cpu_state.Stall().dep_stall);
-  printf("V_DE_BR_STALL   :  %d\n", cpu_state.Stall().v_de_br_stall);
-  printf("V_AGEX_BR_STALL :  %d\n", cpu_state.Stall().v_agex_br_stall);
-  printf("MEM_STALL       :  %d\n", cpu_state.Stall().mem_stall);
-  printf("V_MEM_BR_STALL  :  %d\n", cpu_state.Stall().v_mem_br_stall);
-  printf("\n");
-
+  // Get references to all latches
   const auto & decode = latch(DECODE,PS);
-  printf("------------- decode_sigs   Latches --------------\n");
-  printf("DE_NPC          :  0x%04x\n", decode.NPC.to_num() );
-  printf("DE_IR           :  0x%04x\n", decode.IR.to_num() );
-  printf("DE_V            :  %d\n", decode.V);
-  printf("\n");
-
-  const auto & agex = latch(DECODE,PS);
-  printf("------------- agex_sigs Latches --------------\n");
-  printf("AGEX_NPC        :  0x%04x\n", agex.NPC.to_num() );
-  printf("AGEX_SR1        :  0x%04x\n", agex.SR1.to_num() );
-  printf("AGEX_SR2        :  0x%04x\n", agex.SR2.to_num() );
-  printf("AGEX_CC         :  %d\n", agex.CC.to_num() );
-  printf("AGEX_IR         :  0x%04x\n", agex.IR.to_num() );
-  printf("AGEX_DRID       :  %d\n", agex.DRID.to_num() );
-  printf("AGEX_CS         :  ");
-  for (auto k = 0 ; k < NUM_AGEX_CS_BITS; k++)
-  {
-    printf("%d",agex.AGEX_CS[k]);
-  }
-
-  printf("\n");
-  printf("AGEX_V          :  %d\n", agex.V);
-  printf("\n");
-
+  const auto & agex = latch(AGEX,PS);
   const auto & memory = latch(MEMORY,PS);
-  printf("------------- memory_sigs  Latches --------------\n");
-  printf("MEM_NPC         :  0x%04x\n", memory.NPC.to_num() );
-  printf("MEM_ALU_RESULT  :  0x%04x\n", memory.ALU_RESULT.to_num() );
-  printf("MEM_ADDRESS     :  0x%04x\n", memory.ADDRESS.to_num() );
-  printf("MEM_CC          :  %d\n", memory.CC.to_num() );
-  printf("MEM_IR          :  0x%04x\n", memory.IR.to_num() );
-  printf("MEM_DRID        :  %d\n", memory.DRID.to_num() );
-  printf("MEM_CS          :  ");
-  for (auto k = 0 ; k < NUM_MEM_CS_BITS; k++)
-  {
-    printf("%d",memory.MEM_CS[k]);
-  }
-
-  printf("\n");
-  printf("MEM_V           :  %d\n", memory.V);
-  printf("\n");
-
   const auto & store = latch(STORE,PS);
-  printf("------------- store_signals   Latches --------------\n");
-  printf("SR_NPC          :  0x%04x\n", store.NPC.to_num() );
-  printf("SR_DATA         :  0x%04x\n", store.DATA.to_num() );
-  printf("SR_ALU_RESULT   :  0x%04x\n", store.ALU_RESULT.to_num() );
-  printf("SR_ADDRESS      :  0x%04x\n", store.ADDRESS.to_num() );
-  printf("SR_IR           :  0x%04x\n", store.IR.to_num() );
-  printf("SR_DRID         :  %d\n", store.DRID.to_num());
-  printf("SR_CS           :  ");
-  for (auto k = 0 ; k < NUM_SR_CS_BITS; k++)
-  {
-    printf("%d",store.SR_CS[k]);
-  }
 
-  printf("\n");
-  printf("SR_V            :  %d\n", store.V);
-  printf("\n");
+  // --- table formatting ---
 
-  /* dump the state information into the dumpsim file */
-  fprintf(dumpsim_file, "\nCurrent register/bus values :\n");
-  fprintf(dumpsim_file,"\nCurrent architectural state :\n");
-  fprintf(dumpsim_file,"-------------------------------------\n");
-  fprintf(dumpsim_file,"Cycle Count     : %d\n", simulator().GetCycles());
-  fprintf(dumpsim_file,"CpuState.GetProgramCounter()              : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
-  fprintf(dumpsim_file,"CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
-  fprintf(dumpsim_file,"Registers:\n");
-  for (auto k = 0; k < LC3b_REGS; k++)
-  {
-    fprintf(dumpsim_file,"%d: 0x%04x\n", k, cpu_state.GetRegisterData(k).to_num());
-  }
+  const int COL_WIDTH = 24;
 
-  fprintf(dumpsim_file,"\n");
+  // Helper to create a padded string for a table cell
+  auto format_cell = [&](const std::string& content) -> std::string {
+    std::string padded = "| " + content;
+    if (padded.length() > COL_WIDTH) {
+      padded = padded.substr(0, COL_WIDTH - 4) + "... ";
+    } else {
+      padded.append(COL_WIDTH - padded.length(), ' ');
+    }
+    return padded;
+  };
 
-  fprintf(dumpsim_file,"------------- Stall Signals -------------\n");
-  fprintf(dumpsim_file,"ICACHE_R        :  %d\n", cpu_state.Stall().icache_r);
-  fprintf(dumpsim_file,"DEP_STALL       :  %d\n", cpu_state.Stall().dep_stall);
-  fprintf(dumpsim_file,"V_DE_BR_STALL   :  %d\n", cpu_state.Stall().v_de_br_stall);
-  fprintf(dumpsim_file,"V_AGEX_BR_STALL :  %d\n", cpu_state.Stall().v_agex_br_stall);
-  fprintf(dumpsim_file,"MEM_STALL       :  %d\n", cpu_state.Stall().mem_stall);
-  fprintf(dumpsim_file,"V_MEM_BR_STALL  :  %d\n", cpu_state.Stall().v_mem_br_stall);
-  fprintf(dumpsim_file,"\n");
+  // Helper to format a key-value pair
+  auto kv_format = [](const std::string& key, const std::string& val) -> std::string {
+      return key + ": " + val;
+  };
 
-  fprintf(dumpsim_file,"------------- decode_sigs   Latches --------------\n");
-  fprintf(dumpsim_file,"DE_NPC          :  0x%04x\n", decode.NPC.to_num() );
-  fprintf(dumpsim_file,"DE_IR           :  0x%04x\n", decode.IR.to_num() );
-  fprintf(dumpsim_file,"DE_V            :  %d\n", decode.V);
-  fprintf(dumpsim_file,"\n");
+  // Helper to format hex values
+  auto hex_str = [](uint16_t val) {
+    char buf[10];
+    snprintf(buf, sizeof(buf), "0x%04x", Low16bits(val));
+    return std::string(buf);
+  };
 
-  fprintf(dumpsim_file,"------------- agex_sigs Latches --------------\n");
-  fprintf(dumpsim_file,"AGEX_NPC        :  0x%04x\n", agex.NPC.to_num() );
-  fprintf(dumpsim_file,"AGEX_SR1        :  0x%04x\n", agex.SR1.to_num() );
-  fprintf(dumpsim_file,"AGEX_SR2        :  0x%04x\n", agex.SR2.to_num() );
-  fprintf(dumpsim_file,"AGEX_CC         :  %d\n", agex.CC.to_num() );
-  fprintf(dumpsim_file,"AGEX_IR         :  0x%04x\n", agex.IR.to_num() );
-  fprintf(dumpsim_file,"AGEX_DRID       :  %d\n", agex.DRID.to_num());
-  fprintf(dumpsim_file,"AGEX_CS         :  ");
-  for (auto k = 0 ; k < NUM_AGEX_CS_BITS; k++)
-  {
-    fprintf(dumpsim_file,"%d",agex.AGEX_CS[k]);
-  }
+  // Table Header
+  std::string header = format_cell("STALLS") + format_cell("DECODE") + format_cell("AGEX") + format_cell("MEMORY") + format_cell("STORE") + "|";
+  std::string separator(header.length(), '-');
+  PRINT_AND_DUMP("%s\n", separator.c_str());
+  PRINT_AND_DUMP("%s\n", header.c_str());
+  PRINT_AND_DUMP("%s\n", separator.c_str());
 
-  fprintf(dumpsim_file,"\n");
-  fprintf(dumpsim_file,"AGEX_V          :  %d\n", agex.V);
-  fprintf(dumpsim_file,"\n");
+  Disassembler disassembler;
 
-  fprintf(dumpsim_file,"------------- memory_sigs  Latches --------------\n");
-  fprintf(dumpsim_file,"MEM_NPC         :  0x%04x\n", memory.NPC.to_num() );
-  fprintf(dumpsim_file,"MEM_ALU_RESULT  :  0x%04x\n", memory.ALU_RESULT.to_num() );
-  fprintf(dumpsim_file,"MEM_ADDRESS     :  0x%04x\n", memory.ADDRESS.to_num() );
-  fprintf(dumpsim_file,"MEM_CC          :  %d\n", memory.CC.to_num() );
-  fprintf(dumpsim_file,"MEM_IR          :  0x%04x\n", memory.IR.to_num() );
-  fprintf(dumpsim_file,"MEM_DRID        :  %d\n", memory.DRID.to_num() );
-  fprintf(dumpsim_file,"MEM_CS          :  ");
-  for (auto k = 0 ; k < NUM_MEM_CS_BITS; k++)
-  {
-    fprintf(dumpsim_file,"%d",memory.MEM_CS[k]);
-  }
+  // Instruction
+  PRINT_AND_DUMP("%s%s%s%s%s|\n",
+    format_cell(kv_format("ICACHE_R", std::to_string(cpu_state.Stall().icache_r))).c_str(),
+    format_cell(kv_format("Inst", (decode.V) ? disassembler.disassemble(decode.IR) : "---")).c_str(),
+    format_cell(kv_format("Inst", (agex.V) ? disassembler.disassemble(agex.IR) : "---")).c_str(),
+    format_cell(kv_format("Inst", (memory.V) ? disassembler.disassemble(memory.IR) : "---")).c_str(),
+    format_cell(kv_format("Inst", (store.V) ? disassembler.disassemble(store.IR) : "---")).c_str());
 
-  fprintf(dumpsim_file,"\n");
-  fprintf(dumpsim_file,"MEM_V           :  %d\n", memory.V);
-  fprintf(dumpsim_file,"\n");
+  PRINT_AND_DUMP("%s%s%s%s%s|\n",
+    format_cell(kv_format("DEP_STALL", std::to_string(cpu_state.Stall().dep_stall))).c_str(),
+    format_cell(kv_format("V", std::to_string(decode.V))).c_str(),
+    format_cell(kv_format("V", std::to_string(agex.V))).c_str(),
+    format_cell(kv_format("V", std::to_string(memory.V))).c_str(),
+    format_cell(kv_format("V", std::to_string(store.V))).c_str());
 
-  fprintf(dumpsim_file,"------------- store_signals   Latches --------------\n");
-  fprintf(dumpsim_file,"SR_NPC          :  0x%04x\n", store.NPC.to_num() );
-  fprintf(dumpsim_file,"SR_DATA         :  0x%04x\n",store.DATA.to_num() );
-  fprintf(dumpsim_file,"SR_ALU_RESULT   :  0x%04x\n", store.ALU_RESULT.to_num() );
-  fprintf(dumpsim_file,"SR_ADDRESS      :  0x%04x\n", store.ADDRESS.to_num() );
-  fprintf(dumpsim_file,"SR_IR           :  0x%04x\n", store.IR.to_num() );
-  fprintf(dumpsim_file,"SR_DRID         :  %d\n", store.DRID.to_num());
-  fprintf(dumpsim_file,"SR_CS           :  ");
-  for (auto k = 0 ; k < NUM_SR_CS_BITS; k++)
-  {
-    fprintf(dumpsim_file, "%d",store.SR_CS[k]);
-  }
+  PRINT_AND_DUMP("%s%s%s%s%s|\n",
+    format_cell(kv_format("V_DE_BR_STALL", std::to_string(cpu_state.Stall().v_de_br_stall))).c_str(),
+    format_cell(kv_format("NPC", (decode.V) ? hex_str(decode.NPC.to_num()) : "---")).c_str(),
+    format_cell(kv_format("NPC", (agex.V) ? hex_str(agex.NPC.to_num()) : "---")).c_str(),
+    format_cell(kv_format("NPC", (memory.V) ? hex_str(memory.NPC.to_num()) : "---")).c_str(),
+    format_cell(kv_format("NPC", (store.V) ? hex_str(store.NPC.to_num()) : "---")).c_str());
 
-  fprintf(dumpsim_file,"\n");
-  fprintf(dumpsim_file,"SR_V            :  %d\n", store.V);
-  fprintf(dumpsim_file,"\n");
+  PRINT_AND_DUMP("%s%s%s%s%s|\n",
+    format_cell(kv_format("V_AGEX_BR_STALL", std::to_string(cpu_state.Stall().v_agex_br_stall))).c_str(),
+    format_cell(kv_format("IR", (decode.V) ? hex_str(decode.IR.to_num()) : "---")).c_str(),
+    format_cell(kv_format("IR", (agex.V) ? hex_str(agex.IR.to_num()) : "---")).c_str(),
+    format_cell(kv_format("IR", (memory.V) ? hex_str(memory.IR.to_num()) : "---")).c_str(),
+    format_cell(kv_format("IR", (store.V) ? hex_str(store.IR.to_num()) : "---")).c_str());
+
+  PRINT_AND_DUMP("%s%s%s%s%s|\n",
+    format_cell(kv_format("MEM_STALL", std::to_string(cpu_state.Stall().mem_stall))).c_str(),
+    format_cell("").c_str(),
+    format_cell(kv_format("SR1", (agex.V) ? hex_str(agex.SR1.to_num()) : "---")).c_str(),
+    format_cell(kv_format("ALU_RESULT", (memory.V) ? hex_str(memory.ALU_RESULT.to_num()) : "---")).c_str(),
+    format_cell(kv_format("DATA", (store.V) ? hex_str(store.DATA.to_num()) : "---")).c_str());
+
+  PRINT_AND_DUMP("%s%s%s%s%s|\n",
+    format_cell(kv_format("V_MEM_BR_STALL", std::to_string(cpu_state.Stall().v_mem_br_stall))).c_str(),
+    format_cell("").c_str(),
+    format_cell(kv_format("SR2", (agex.V) ? hex_str(agex.SR2.to_num()) : "---")).c_str(),
+    format_cell(kv_format("ADDRESS", (memory.V) ? hex_str(memory.ADDRESS.to_num()) : "---")).c_str(),
+    format_cell(kv_format("ALU_RESULT", (store.V) ? hex_str(store.ALU_RESULT.to_num()) : "---")).c_str());
+
+  PRINT_AND_DUMP("%s\n", separator.c_str());
 
   fflush(dumpsim_file);
+
+  // Undefine the macro to avoid polluting other functions
+#undef PRINT_AND_DUMP
 }
 
 /*
@@ -260,7 +208,7 @@ Latch & PipeLine::latch(Stages stage, const PipeState & latch)
     return *latch.at(3);
     break;
   default:
-    assert(1); //TODO: proper error handling (should not happen)
+    throw std::runtime_error("Invalid stage for latch access"); // Should not happen
     break;
   }
 }
@@ -309,9 +257,9 @@ bool PipeLine::IsStallDetected()
 {
   auto & stall = simulator().state().Stall();
 
-  //Any stall signals asserted or instruction cache is not ready.
-  //For control instructions, pipeline needs to wait until the
-  //branch logic unit completes the calculation of the next PC.
+  // Any stall signals asserted or instruction cache is not ready.
+  // For control instructions, pipeline needs to wait until the
+  // branch logic unit completes the calculation of the next PC.
 
   if (stall.icache_r &&
       !stall.dep_stall &&
@@ -335,22 +283,22 @@ void PipeLine::ProcessRegisterFile(const bits16 & de_instruction)
   auto & decode_sigs = cpu_state.DecodeSignals();
   auto & store_signals = cpu_state.SrSignals();
 
-  //select the sr2 register based on the type
-  //of access: register or immediate
-  //SR2.IDMUX = de_instruction[13]
+  // select the sr2 register based on the type
+  // of access: register or immediate
+  // SR2.IDMUX = de_instruction[13]
   decode_sigs.de_sr1 = de_instruction.range<8,6>();
   if(de_instruction[13])
     decode_sigs.de_sr2 = de_instruction.range<11,9>();
   else
     decode_sigs.de_sr2 = de_instruction.range<2,0>();
 
-  //get the data from the register
-  //to be used in the Decode stage
+  // get the data from the register
+  // to be used in the Decode stage
   decode_sigs.de_sr1_data = cpu_state.GetRegisterData(decode_sigs.de_sr1);
   decode_sigs.de_sr2_data = cpu_state.GetRegisterData(decode_sigs.de_sr2);
 
-  //load processed data into destinaion
-  //register baed on ucode bit
+  // load processed data into destinaion
+  // register baed on ucode bit
   if(store_signals.v_sr_ld_reg)
   {
     cpu_state.SetDataForRegister(store_signals.sr_drid, store_signals.sr_reg_data);
@@ -370,8 +318,8 @@ bool PipeLine::CheckForDataDependencies()
   auto & ucode = simulator().microsequencer();
   auto & de_latch = latch(DECODE,PS);
 
-  //check for dependecy if no stalls
-  //were detected in the fetch stage
+  // check for dependecy if no stalls
+  // were detected in the fetch stage
   if(de_latch.V)
   {
     auto & de_sig = cpu_state.DecodeSignals();
@@ -379,18 +327,18 @@ bool PipeLine::CheckForDataDependencies()
     auto & mem_sig = cpu_state.MemSignals();
     auto & sr_sig = cpu_state.SrSignals();
 
-    //Get SR1/SR2 needed bits from the control store ucode
+    // Get SR1/SR2 needed bits from the control store ucode
     auto sr1_needed = ucode.Get_SR1_NEEDED(de_sig.de_ucode);
     auto sr2_needed = ucode.Get_SR2_NEEDED(de_sig.de_ucode);
     auto branch_op = ucode.Get_DE_BR_OP(de_sig.de_ucode);
 
-    //To determine if a dependency exists, the Dependency Check Logic compares the
-    //destination register number of the instructions in the agex_sigs, memory_sigs, and store_signals stages
-    //to the source register numbers of the instruction in the decode_sigs stage. If a match
-    //is found and the instruction in the decode_sigs stage actually needs the source register
-    //(as indicated by the SR1.NEEDED or SR2.NEEDED control signal) and an instruction
-    //in a later stage actually writes to the same register (as indicated by the
-    //V.agex_sigs.LD.REG, V.memory_sigs.LD.REG, or V.store_signals.LD.REG signals), DEP.STALL should be set to 1
+    // To determine if a dependency exists, the Dependency Check Logic compares the
+    // destination register number of the instructions in the agex_sigs, memory_sigs, and store_signals stages
+    // to the source register numbers of the instruction in the decode_sigs stage. If a match
+    // is found and the instruction in the decode_sigs stage actually needs the source register
+    // (as indicated by the SR1.NEEDED or SR2.NEEDED control signal) and an instruction
+    // in a later stage actually writes to the same register (as indicated by the
+    // V.agex_sigs.LD.REG, V.memory_sigs.LD.REG, or V.store_signals.LD.REG signals), DEP.STALL should be set to 1
     if(sr1_needed)
     {
       if((agex_sig.v_agex_ld_reg && (de_sig.de_sr1.to_num() == agex_sig.agex_drid.to_num())) ||
@@ -407,9 +355,9 @@ bool PipeLine::CheckForDataDependencies()
           return true;
     }
 
-    //If the instruction in the decode_sigs stage is a conditional branch instruction
-    //(as indicated by the BR.OP control signal), and if any of the instructions
-    //in the agex_sigs, memory_sigs, or store_signals stages is writing to the condition codes, then DEP.STALL
+    // If the instruction in the decode_sigs stage is a conditional branch instruction
+    // (as indicated by the BR.OP control signal), and if any of the instructions
+    // in the agex_sigs, memory_sigs, or store_signals stages is writing to the condition codes, then DEP.STALL
     if(branch_op &&
         (agex_sig.v_agex_ld_cc ||
          mem_sig.v_mem_ld_cc ||
@@ -444,19 +392,19 @@ void PipeLine::SR_stage()
   /* You are given the code for SR_stage to get you started. Look at
      the figure for store_signals stage to see how this code is implemented. */
 
-  switch (micro_sequencer.Get_DR_VALUEMUX1(store_latch.SR_CS).to_num())
+  switch (micro_sequencer.Get_DR_VALUEMUX(store_latch.SR_CS).to_num())
   {
   case 0:
-    sr_sig.sr_reg_data = store_latch.ADDRESS ;
+    sr_sig.sr_reg_data = store_latch.ADDRESS;
     break;
   case 1:
-    sr_sig.sr_reg_data = store_latch.DATA ;
+    sr_sig.sr_reg_data = store_latch.DATA;
     break;
   case 2:
-    sr_sig.sr_reg_data = store_latch.NPC ;
+    sr_sig.sr_reg_data = store_latch.NPC;
     break;
   case 3:
-    sr_sig.sr_reg_data = store_latch.ALU_RESULT ;
+    sr_sig.sr_reg_data = store_latch.ALU_RESULT;
     break;
   }
 
@@ -771,7 +719,7 @@ void PipeLine::DE_stage()
   //Condition code N is stored in agex_sigs.CC[2], Z is stored in agex_sigs.CC[1], and P is stored in
   //agex_sigs.CC[0]. Note that the condition codes and register file are read and the values
   //obtained are latched regardless of whether an instruction needs these values.
-  de_sig.de_npc = cpu_state.GetNZP();
+  de_sig.de_cc = cpu_state.GetNZP();
 
   //Dependency check logic indicates whether or not the instruction in the decode_sigs stage should
   //be propagated forward. If DEP.STALL is asserted, the state of the decode_sigs latches should
@@ -797,7 +745,7 @@ void PipeLine::DE_stage()
     agex_latch.IR = decode_latch.IR;
     agex_latch.SR1 = de_sig.de_sr1_data;
     agex_latch.SR2 = de_sig.de_sr2_data;
-    agex_latch.CC = de_sig.de_npc;
+    agex_latch.CC = de_sig.de_cc;
     agex_latch.AGEX_CS.range<19,0>() = de_sig.de_ucode.range<22,3>();
 
     if(micro_sequencer.Get_DRMUX(de_sig.de_ucode))
@@ -867,6 +815,6 @@ void PipeLine::FETCH_stage()
 
     //decode_sigs.valid is 0 if stall was detected or a branch
     //was not taken. Ohterwise, stage is good to go
-    decode_latch.V = (!load_pc || stall.v_mem_br_stall) ? 0 : 1;
+    decode_latch.V = load_pc;
   }
 }

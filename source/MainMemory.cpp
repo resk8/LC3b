@@ -2,7 +2,6 @@
 /* Memory Implementaion                                        */
 /***************************************************************/
 
-#include <iostream>
 #ifdef __linux__
     #include "../include/Simulator.h"
     #include "../include/MainMemory.h"
@@ -101,7 +100,7 @@ void MainMemory::SetUpperByteAt(const bits16 & address, bits8 val)
   catch (const std::out_of_range& oor)
   {
     printf("\n********* C++ exception *********\n");
-    printf("Error: High byte write to invalid memory location: addr=0x%04hXs\n",address.to_num());
+    printf("Error: High byte write to invalid memory location: addr=0x%04hX\n",address.to_num());
     printf("C++ error code : %s\n",oor.what());
 	  Exit();
   }
@@ -115,9 +114,9 @@ void MainMemory::SetUpperByteAt(const bits16 & address, bits8 val)
 void MainMemory::dcache_access(const bits16 & dcache_addr, bits16 & read_word, const bits16 & write_word, bool  & dcache_r, bool mem_w0, bool mem_w1)
 {
   auto addr = dcache_addr >> 1;
-  int random = simulator().GetCycles() % 9;
+  int random = 0; //simulator().GetCycles() % 9;
 
-  if (!random)
+  if (random)
   {
     dcache_r = false;
     read_word = 0xfeed ;
@@ -141,9 +140,9 @@ void MainMemory::dcache_access(const bits16 & dcache_addr, bits16 & read_word, c
 void MainMemory::icache_access(const bits16 & icache_addr, bits16 & read_word, bool & icache_r)
 {
   auto addr = icache_addr >> 1;
-  int random = simulator().GetCycles() % 13;
+  int random = 0; //simulator().GetCycles() % 13;
 
-  if (!random)
+  if (random)
   {
     icache_r = false;
     read_word = 0xfeed;

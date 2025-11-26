@@ -1,6 +1,8 @@
+/***************************************************************/
+/* LC3b.h: LC-3b Main Header File                              */
+/***************************************************************/
 #pragma once
 
-#include <type_traits>
 #ifdef __linux__ 
     #include "../include/BitField.h"
 #else
@@ -117,6 +119,7 @@ enum Stages {
 
 using bits2 = bitfield<2>;
 using bits3 = bitfield<3>;
+using bits4 = bitfield<4>;
 using bits8 = bitfield<8>;
 using bits16 = bitfield<16>;
 using cs_bits = bitfield<NUM_CONTROL_STORE_BITS>;

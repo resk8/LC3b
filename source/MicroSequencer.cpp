@@ -2,7 +2,6 @@
 /* MicroSequencer Implementaion                                */
 /***************************************************************/
 
-#include <iostream>
 #ifdef __linux__
     #include "../include/MicroSequencer.h"
 #else
