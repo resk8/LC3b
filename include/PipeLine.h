@@ -5,12 +5,24 @@
 
 #include <stdio.h>
 #include <memory>
+#include <string>
 #include <vector>
+#include <map>
 #ifdef __linux__ 
     #include "../include/LC3b.h"
 #else
     #include "LC3b.h"
 #endif
+
+/*
+* A structure to hold the trace of a single instruction
+* as it moves through the pipeline.
+*/
+struct InstructionTrace {
+    uint16_t pc;
+    std::string disassembled;
+    std::map<int, std::string> cycle_history;
+};
 
 class Latch;
 typedef std::vector<std::shared_ptr<Latch>> PipeState;
@@ -37,6 +49,7 @@ class PipeLine
   void AGEX_stage();
   void MEM_stage();
   void SR_stage();
+  void Cycle();
   void PropagatePipeLine();
   void MoveLatch(const PipeState & destination, const PipeState & source);
   bool IsStallDetected();
@@ -46,6 +59,8 @@ class PipeLine
   bool IsMemoryMoveInstruction();
   void ProcessRegisterFile(const bits16 & de_instruction);
   bool CheckForDataDependencies();
+  void UpdateHistory();
+  void DumpHistory();
 
   private:
   Simulator & _simulator;
@@ -55,4 +70,7 @@ class PipeLine
   PipeState NEW_PS;
 
   Stages current_stage;
+
+  // A vector to store the history of every instruction fetched.
+  std::vector<InstructionTrace> instruction_history;
 };

@@ -60,7 +60,7 @@ void Simulator::help()
 /***************************************************************/
 void Simulator::cycle()
 {
-  pipeline().PropagatePipeLine();
+  pipeline().Cycle();
   CYCLE_COUNT++;
 }
 
@@ -115,9 +115,9 @@ void Simulator::go()
     cycle();
   }
 
-  cycle();
   RUN_BIT = FALSE;
-  printf("Simulator halted\n\n");
+  pipeline().DumpHistory();
+  printf("\nSimulator halted\n\n");
 }
 
 /***************************************************************/

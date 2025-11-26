@@ -39,6 +39,7 @@ PipeLine::PipeLine(Simulator & instance) : _simulator(instance)
     PS.at(i) = std::make_shared<Latch>();
     NEW_PS.at(i) = std::make_shared<Latch>();
   }
+  instruction_history.reserve(100); // Pre-allocate space for performance
 }
 
 /***************************************************************/
@@ -51,135 +52,92 @@ PipeLine::PipeLine(Simulator & instance) : _simulator(instance)
 void PipeLine::init_pipeline()
 {
   SetStage(UNDEFINED);
+  instruction_history.clear();
 }
 
 /***************************************************************/
 /*                                                             */
 /* Procedure : idump                                           */
 /*                                                             */
-/* Purpose   : Dump current internal state to the              */
-/*             output file.                                    */
+/* Purpose   : Dump pipeline timing diagram to the output file.*/
 /*                                                             */
 /***************************************************************/
 void PipeLine::idump(FILE * dumpsim_file)
 {
   // Helper macro to print to both terminal and file, removing redundancy.
-#define PRINT_AND_DUMP(...) \
-    do { \
-        printf(__VA_ARGS__); \
-        if (dumpsim_file) { fprintf(dumpsim_file, __VA_ARGS__); } \
-    } while (0)
+  #define PRINT_AND_DUMP(...) \
+      do { \
+          printf(__VA_ARGS__); \
+          if (dumpsim_file) { fprintf(dumpsim_file, __VA_ARGS__); } \
+      } while (0)
 
-  State & cpu_state = simulator().state();
+  const int PC_COL_WIDTH = 8;
+  const int INST_COL_WIDTH = 30;
+  const int CYCLE_COL_WIDTH = 5;
+  int current_cycle = simulator().GetCycles();
 
-  PRINT_AND_DUMP("\nCurrent architectural state :\n");
-  PRINT_AND_DUMP("-------------------------------------\n");
-  PRINT_AND_DUMP("Cycle Count     : %d\n", simulator().GetCycles());
-  PRINT_AND_DUMP("PC                : 0x%04x\n", cpu_state.GetProgramCounter().to_num());
-  PRINT_AND_DUMP("CCs: N = %d  Z = %d  P = %d\n", cpu_state.GetNBit(), cpu_state.GetZBit(), cpu_state.GetPBit());
-  PRINT_AND_DUMP("Registers:\n");
-  for (auto k = 0; k < LC3b_REGS; k++)
-  {
-    PRINT_AND_DUMP("R%d: 0x%04x\n", k, cpu_state.GetRegisterData(k).to_num());
+  // Header
+  PRINT_AND_DUMP("\n%-*s| %-*s", PC_COL_WIDTH, "PC", INST_COL_WIDTH, "Instruction");
+  for (int i = 0; i <= current_cycle; ++i) {
+      char cycle_header[10];
+      snprintf(cycle_header, sizeof(cycle_header), "C%d", i);
+      PRINT_AND_DUMP("| %-*s", CYCLE_COL_WIDTH, cycle_header);
   }
-  PRINT_AND_DUMP("\n");
+  PRINT_AND_DUMP("|\n");
 
-  // Get references to all latches
-  const auto & decode = latch(DECODE,PS);
-  const auto & agex = latch(AGEX,PS);
-  const auto & memory = latch(MEMORY,PS);
-  const auto & store = latch(STORE,PS);
-
-  // --- table formatting ---
-
-  const int COL_WIDTH = 24;
-
-  // Helper to create a padded string for a table cell
-  auto format_cell = [&](const std::string& content) -> std::string {
-    std::string padded = "| " + content;
-    if (padded.length() > COL_WIDTH) {
-      padded = padded.substr(0, COL_WIDTH - 4) + "... ";
-    } else {
-      padded.append(COL_WIDTH - padded.length(), ' ');
-    }
-    return padded;
-  };
-
-  // Helper to format a key-value pair
-  auto kv_format = [](const std::string& key, const std::string& val) -> std::string {
-      return key + ": " + val;
-  };
-
-  // Helper to format hex values
-  auto hex_str = [](uint16_t val) {
-    char buf[10];
-    snprintf(buf, sizeof(buf), "0x%04x", Low16bits(val));
-    return std::string(buf);
-  };
-
-  // Table Header
-  std::string header = format_cell("STALLS") + format_cell("DECODE") + format_cell("AGEX") + format_cell("MEMORY") + format_cell("STORE") + "|";
-  std::string separator(header.length(), '-');
-  PRINT_AND_DUMP("%s\n", separator.c_str());
-  PRINT_AND_DUMP("%s\n", header.c_str());
+  // Separator
+  std::string separator(PC_COL_WIDTH, '-');
+  separator += "+" + std::string(INST_COL_WIDTH + 1, '-');
+  for (int i = 0; i <= current_cycle; ++i) {
+      separator += "+" + std::string(CYCLE_COL_WIDTH + 1, '-');
+  }
+  separator += "|";
   PRINT_AND_DUMP("%s\n", separator.c_str());
 
-  Disassembler disassembler;
+  // Instruction Rows
+  for (const auto& inst_trace : instruction_history) {
+      char pc_str[PC_COL_WIDTH];
+      snprintf(pc_str, sizeof(pc_str), "0x%04x", inst_trace.pc);
+      PRINT_AND_DUMP("%-*s| %-*s", PC_COL_WIDTH, pc_str, INST_COL_WIDTH, inst_trace.disassembled.c_str());
 
-  // Instruction
-  PRINT_AND_DUMP("%s%s%s%s%s|\n",
-    format_cell(kv_format("ICACHE_R", std::to_string(cpu_state.Stall().icache_r))).c_str(),
-    format_cell(kv_format("Inst", (decode.V) ? disassembler.disassemble(decode.IR) : "---")).c_str(),
-    format_cell(kv_format("Inst", (agex.V) ? disassembler.disassemble(agex.IR) : "---")).c_str(),
-    format_cell(kv_format("Inst", (memory.V) ? disassembler.disassemble(memory.IR) : "---")).c_str(),
-    format_cell(kv_format("Inst", (store.V) ? disassembler.disassemble(store.IR) : "---")).c_str());
+      bool retired = false;
+      for (int i = 0; i <= current_cycle; ++i) {
+          const char* stage_char = ""; // Default to an empty cell
 
-  PRINT_AND_DUMP("%s%s%s%s%s|\n",
-    format_cell(kv_format("DEP_STALL", std::to_string(cpu_state.Stall().dep_stall))).c_str(),
-    format_cell(kv_format("V", std::to_string(decode.V))).c_str(),
-    format_cell(kv_format("V", std::to_string(agex.V))).c_str(),
-    format_cell(kv_format("V", std::to_string(memory.V))).c_str(),
-    format_cell(kv_format("V", std::to_string(store.V))).c_str());
-
-  PRINT_AND_DUMP("%s%s%s%s%s|\n",
-    format_cell(kv_format("V_DE_BR_STALL", std::to_string(cpu_state.Stall().v_de_br_stall))).c_str(),
-    format_cell(kv_format("NPC", (decode.V) ? hex_str(decode.NPC.to_num()) : "---")).c_str(),
-    format_cell(kv_format("NPC", (agex.V) ? hex_str(agex.NPC.to_num()) : "---")).c_str(),
-    format_cell(kv_format("NPC", (memory.V) ? hex_str(memory.NPC.to_num()) : "---")).c_str(),
-    format_cell(kv_format("NPC", (store.V) ? hex_str(store.NPC.to_num()) : "---")).c_str());
-
-  PRINT_AND_DUMP("%s%s%s%s%s|\n",
-    format_cell(kv_format("V_AGEX_BR_STALL", std::to_string(cpu_state.Stall().v_agex_br_stall))).c_str(),
-    format_cell(kv_format("IR", (decode.V) ? hex_str(decode.IR.to_num()) : "---")).c_str(),
-    format_cell(kv_format("IR", (agex.V) ? hex_str(agex.IR.to_num()) : "---")).c_str(),
-    format_cell(kv_format("IR", (memory.V) ? hex_str(memory.IR.to_num()) : "---")).c_str(),
-    format_cell(kv_format("IR", (store.V) ? hex_str(store.IR.to_num()) : "---")).c_str());
-
-  PRINT_AND_DUMP("%s%s%s%s%s|\n",
-    format_cell(kv_format("MEM_STALL", std::to_string(cpu_state.Stall().mem_stall))).c_str(),
-    format_cell("").c_str(),
-    format_cell(kv_format("SR1", (agex.V) ? hex_str(agex.SR1.to_num()) : "---")).c_str(),
-    format_cell(kv_format("ALU_RESULT", (memory.V) ? hex_str(memory.ALU_RESULT.to_num()) : "---")).c_str(),
-    format_cell(kv_format("DATA", (store.V) ? hex_str(store.DATA.to_num()) : "---")).c_str());
-
-  PRINT_AND_DUMP("%s%s%s%s%s|\n",
-    format_cell(kv_format("V_MEM_BR_STALL", std::to_string(cpu_state.Stall().v_mem_br_stall))).c_str(),
-    format_cell("").c_str(),
-    format_cell(kv_format("SR2", (agex.V) ? hex_str(agex.SR2.to_num()) : "---")).c_str(),
-    format_cell(kv_format("ADDRESS", (memory.V) ? hex_str(memory.ADDRESS.to_num()) : "---")).c_str(),
-    format_cell(kv_format("ALU_RESULT", (store.V) ? hex_str(store.ALU_RESULT.to_num()) : "---")).c_str());
-
-  PRINT_AND_DUMP("%s\n", separator.c_str());
-
+          if (!retired) {
+              auto it = inst_trace.cycle_history.find(i);
+              if (it != inst_trace.cycle_history.end()) {
+                  stage_char = it->second.c_str();
+                  // If the instruction just completed the Store stage, mark it as retired for the *next* cycle.
+                  if (it->second == "S") retired = true;
+              }
+          }
+          PRINT_AND_DUMP("| %-*s", CYCLE_COL_WIDTH, stage_char);
+      }
+      PRINT_AND_DUMP("|\n");
+  }
   fflush(dumpsim_file);
 
   // Undefine the macro to avoid polluting other functions
-#undef PRINT_AND_DUMP
+  #undef PRINT_AND_DUMP
 }
 
-/*
-* //TODO
-*/
+/***************************************************************/
+/*                                                             */
+/* Procedure : Cycle                                           */
+/*                                                             */
+/* Purpose   : Execute one cycle of the pipeline               */
+/*                                                             */
+/***************************************************************/
+void PipeLine::Cycle()
+{
+  // 1. Simulate all stages to determine the state of NEW_PS
+  PropagatePipeLine();
+  // 2. Record what happened in this cycle based on PS and NEW_PS
+  UpdateHistory();
+  // 3. Advance the pipeline by committing the new state
+  MoveLatch(PS, NEW_PS);
+}
 void PipeLine::MoveLatch(const PipeState & destination, const PipeState & source)
 {
   for(auto i = 0; i < NUM_OF_LATCHES; i++)
@@ -188,9 +146,6 @@ void PipeLine::MoveLatch(const PipeState & destination, const PipeState & source
   }
 }
 
-/*
-* //TODO
-*/
 Latch & PipeLine::latch(Stages stage, const PipeState & latch)
 {
   switch (stage)
@@ -213,27 +168,18 @@ Latch & PipeLine::latch(Stages stage, const PipeState & latch)
   }
 }
 
-/*
-* //TODO
-*/
 bool PipeLine::IsControlInstruction()
 {
   //TODO: finish the implementation
   return 1;
 }
 
-/*
-* //TODO
-*/
 bool PipeLine::IsOperateInstruction()
 {
   //TODO: finish the implementation
   return 1;
 }
 
-/*
-* //TODO
-*/
 bool PipeLine::IsMemoryMoveInstruction()
 {
   //TODO: finish the implementation
@@ -372,14 +318,53 @@ bool PipeLine::CheckForDataDependencies()
 */
 void PipeLine::PropagatePipeLine()
 {
-  MoveLatch(NEW_PS,PS);
+  // This function just simulates the logic of each stage for one cycle.
+  // It calculates the state of NEW_PS based on the state of PS.
   SR_stage();
   MEM_stage();
   AGEX_stage();
   DE_stage();
   FETCH_stage();
-  idump(simulator().dump_file);
-  MoveLatch(PS,NEW_PS);
+}
+
+void PipeLine::UpdateHistory()
+{
+  int current_cycle = simulator().GetCycles();
+  Disassembler disassembler;
+
+  // A new instruction has been successfully fetched if it's valid in the next
+  // DECODE latch, AND it's different from what was in the current DECODE latch
+  // (or the current latch was invalid). This prevents creating duplicate rows for stalls.
+  if (latch(DECODE, NEW_PS).V) {
+      bool is_new_instruction = false;
+      if (!latch(DECODE, PS).V || (latch(DECODE, PS).NPC.to_num() != latch(DECODE, NEW_PS).NPC.to_num())) {
+          is_new_instruction = true;
+      }
+
+      if (is_new_instruction) {
+          InstructionTrace new_trace;
+          new_trace.pc = latch(DECODE, NEW_PS).NPC.to_num() - 2;
+          new_trace.disassembled = disassembler.disassemble(latch(DECODE, NEW_PS).IR);
+          instruction_history.push_back(new_trace);
+      }
+  }
+
+  // Update history for all instructions based on where they are in the CURRENT pipeline state (PS)
+  for (auto& inst_trace : instruction_history) {
+      std::string stage_char = " "; // Default to blank
+      if      (latch(STORE, PS).V  && (latch(STORE, PS).NPC.to_num()  - 2 == inst_trace.pc)) stage_char = "S";
+      else if (latch(MEMORY, PS).V && (latch(MEMORY, PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "M";
+      else if (latch(AGEX, PS).V   && (latch(AGEX, PS).NPC.to_num()   - 2 == inst_trace.pc)) stage_char = "E";
+      else if (latch(DECODE, PS).V && (latch(DECODE, PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "D";
+      else if (inst_trace.cycle_history.empty()) stage_char = "F";
+
+      // Check for stalls by seeing if the instruction is still in the same stage in the *next* cycle
+      if (stage_char == "D" && latch(DECODE, NEW_PS).V && (latch(DECODE, NEW_PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "D*";
+      if (stage_char == "E" && latch(AGEX, NEW_PS).V   && (latch(AGEX, NEW_PS).NPC.to_num()   - 2 == inst_trace.pc)) stage_char = "E*";
+      if (stage_char == "M" && latch(MEMORY, NEW_PS).V && (latch(MEMORY, NEW_PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "M*";
+
+      inst_trace.cycle_history[current_cycle] = stage_char;
+  }
 }
 
 /************************* SR_stage() *************************/
@@ -817,4 +802,11 @@ void PipeLine::FETCH_stage()
     //was not taken. Ohterwise, stage is good to go
     decode_latch.V = (!load_pc || stall.v_mem_br_stall) ? 0 : 1;
   }
+}
+
+void PipeLine::DumpHistory()
+{
+  // This function is called ONCE at the end of the simulation
+  if (simulator().dump_file != nullptr)
+    idump(simulator().dump_file);
 }
