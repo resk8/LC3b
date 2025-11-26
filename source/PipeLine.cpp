@@ -815,6 +815,6 @@ void PipeLine::FETCH_stage()
 
     //decode_sigs.valid is 0 if stall was detected or a branch
     //was not taken. Ohterwise, stage is good to go
-    decode_latch.V = load_pc;
+    decode_latch.V = (!load_pc || stall.v_mem_br_stall) ? 0 : 1;
   }
 }
