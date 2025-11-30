@@ -2,6 +2,7 @@
 /* MicroSequencer Implementaion                                */
 /***************************************************************/
 
+#include <cstring>
 #ifdef __linux__
     #include "../include/MicroSequencer.h"
 #else
@@ -38,42 +39,68 @@ void MicroSequencer::init_control_store(char *ucode_filename)
   }
 
   /* Read a line for each row in the control store. */
-  for(auto i = 0; i < CONTROL_STORE_ROWS; i++)
+  int ucode_row = 0;
+  while(ucode_row < CONTROL_STORE_ROWS)
   {
     if (fscanf(ucode, "%[^\n]\n", line) == EOF)
     {
-      printf("Error: Too few lines (%d) in micro-code file: %s\n", i, ucode_filename);
+      printf("Error: Too few lines (%d) in micro-code file: %s. Expected %d lines.\n", ucode_row, ucode_filename, CONTROL_STORE_ROWS);
       Exit();
     }
 
-    /* Put in bits one at a time. */
-    auto index = 0;
-
-    for (auto j = 0; j < NUM_CONTROL_STORE_BITS; j++)
+    /* Find the '#' character and terminate the string there to ignore comments */
+    char* comment_start = strchr(line, '#');
+    if (comment_start != NULL)
     {
-      /* Needs to find enough bits in line. */
-      if (line[index] == '\0')
+        *comment_start = '\0';
+    }
+
+    // Check if the line is empty after stripping comments
+    bool is_empty = true;
+    for (int j = 0; line[j] != '\0'; j++) {
+        if (!isspace(line[j])) {
+            is_empty = false;
+            break;
+        }
+    }
+
+    if (is_empty) {
+        continue; // Skip empty or comment-only lines
+    }
+
+    /* Put in bits one at a time. */
+    int bit_count = 0;
+
+    for (int j = 0; line[j] != '\0' && bit_count < NUM_CONTROL_STORE_BITS; j++)
+    {
+      if (line[j] == '0' || line[j] == '1')
       {
-        printf("Error: Too few control bits in micro-code file: %s\nLine: %d\n", ucode_filename, i);
+        /* Set the bit in the Control Store. */
+        SetMicroCodeBitsAt(ucode_row, bit_count, (line[j] == '0') ? 0 : 1);
+        bit_count++;
+      }
+      else if (!isspace(line[j]))
+      {
+        printf("Error: Unknown value '%c' in micro-code file: %s\nLine: %d\n", line[j], ucode_filename, ucode_row);
         Exit();
       }
+    }
 
-      if (line[index] != '0' && line[index] != '1')
-      {
-        printf("Error: Unknown value in micro-code file: %s\nLine: %d, Bit: %d\n", ucode_filename, i, j);
-        Exit();
-      }
-
-      /* Set the bit in the Control Store. */
-      SetMicroCodeBitsAt(i,j,(line[index] == '0') ? 0:1);
-      index++;
+    if (bit_count < NUM_CONTROL_STORE_BITS)
+    {
+      printf("Error: Too few control bits in micro-code file: %s\nLine: %d (found %d, expected %d)\n", ucode_filename, ucode_row, bit_count, NUM_CONTROL_STORE_BITS);
+      Exit();
     }
 
     /* Warn about extra bits in line. */
-    if (line[index] != '\0')
+    for (int j = 0; line[j] != '\0'; j++)
     {
-      printf("Warning: Extra bit(s) in control store file %s. Line: %d\n", ucode_filename, i);
+        if (!isspace(line[j]) && line[j] != '0' && line[j] != '1') {
+             printf("Warning: Extra character(s) '%c' in control store file %s. Line: %d\n", line[j], ucode_filename, ucode_row);
+        }
     }
+
+    ucode_row++; // Increment only when a valid line is processed
   }
   printf("\n");
 }

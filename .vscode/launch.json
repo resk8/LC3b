@@ -9,7 +9,7 @@
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/source/lC3b",
-            "args": ["ucode6","exemple1.obj"],            
+            "args": ["ucode","exemple.obj"],            
             "cwd": "${workspaceFolder}/doc/test",
             "preLaunchTask": "Linux Build",
             "expressions":"native",
