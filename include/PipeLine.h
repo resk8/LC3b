@@ -22,6 +22,9 @@ struct InstructionTrace {
     uint16_t pc;
     std::string disassembled;
     std::map<int, std::string> cycle_history;
+    uint16_t mem_addr;
+    bool mem_addr_valid;
+    InstructionTrace() : pc(0), mem_addr(0), mem_addr_valid(false) {}
 };
 
 class Latch;

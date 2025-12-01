@@ -73,11 +73,12 @@ void PipeLine::idump(FILE * dumpsim_file)
 
   const int PC_COL_WIDTH = 8;
   const int INST_COL_WIDTH = 30;
+  const int MEM_ADDR_COL_WIDTH = 10;
   const int CYCLE_COL_WIDTH = 5;
   int current_cycle = simulator().GetCycles();
 
   // Header
-  PRINT_AND_DUMP("\n%-*s| %-*s", PC_COL_WIDTH, "PC", INST_COL_WIDTH, "Instruction");
+  PRINT_AND_DUMP("\n%-*s| %-*s| %-*s", PC_COL_WIDTH, "PC", INST_COL_WIDTH, "Instruction", MEM_ADDR_COL_WIDTH, "Mem Addr");
   for (int i = 0; i <= current_cycle; ++i) {
       char cycle_header[10];
       snprintf(cycle_header, sizeof(cycle_header), "C%d", i);
@@ -87,7 +88,7 @@ void PipeLine::idump(FILE * dumpsim_file)
 
   // Separator
   std::string separator(PC_COL_WIDTH, '-');
-  separator += "+" + std::string(INST_COL_WIDTH + 1, '-');
+  separator += "+" + std::string(INST_COL_WIDTH + 1, '-') + "+" + std::string(MEM_ADDR_COL_WIDTH + 1, '-');
   for (int i = 0; i <= current_cycle; ++i) {
       separator += "+" + std::string(CYCLE_COL_WIDTH + 1, '-');
   }
@@ -95,26 +96,43 @@ void PipeLine::idump(FILE * dumpsim_file)
   PRINT_AND_DUMP("%s\n", separator.c_str());
 
   // Instruction Rows
-  for (const auto& inst_trace : instruction_history) {
+  for (auto inst_iter = instruction_history.begin(); inst_iter != instruction_history.end(); ) {
+      const auto& inst_trace = *inst_iter;
       char pc_str[PC_COL_WIDTH];
       snprintf(pc_str, sizeof(pc_str), "0x%04x", inst_trace.pc);
-      PRINT_AND_DUMP("%-*s| %-*s", PC_COL_WIDTH, pc_str, INST_COL_WIDTH, inst_trace.disassembled.c_str());
+
+      char mem_addr_str[MEM_ADDR_COL_WIDTH + 1] = "";
+      if (inst_trace.mem_addr_valid) {
+          snprintf(mem_addr_str, sizeof(mem_addr_str), "0x%04x", inst_trace.mem_addr);
+      }
+
+      PRINT_AND_DUMP("%-*s| %-*s| %-*s", PC_COL_WIDTH, pc_str, INST_COL_WIDTH, inst_trace.disassembled.c_str(), MEM_ADDR_COL_WIDTH, mem_addr_str);
 
       bool retired = false;
       for (int i = 0; i <= current_cycle; ++i) {
-          const char* stage_char = ""; // Default to an empty cell
+          std::string stage_char = ""; // Default to an empty cell
 
           if (!retired) {
               auto it = inst_trace.cycle_history.find(i);
               if (it != inst_trace.cycle_history.end()) {
-                  stage_char = it->second.c_str();
+                  stage_char = it->second;
                   // If the instruction just completed the Store stage, mark it as retired for the *next* cycle.
-                  if (it->second == "S") retired = true;
+                  if (it->second == "S") {
+                    retired = true;
+                  }
               }
           }
-          PRINT_AND_DUMP("| %-*s", CYCLE_COL_WIDTH, stage_char);
+
+          PRINT_AND_DUMP("| %-*s", CYCLE_COL_WIDTH, stage_char.c_str());
       }
       PRINT_AND_DUMP("|\n");
+
+      // If the instruction is retired, remove it from history after printing.
+      if (retired) {
+          inst_iter = instruction_history.erase(inst_iter);
+      } else {
+          ++inst_iter;
+      }
   }
   fflush(dumpsim_file);
 
@@ -138,6 +156,7 @@ void PipeLine::Cycle()
   // 3. Advance the pipeline by committing the new state
   MoveLatch(PS, NEW_PS);
 }
+
 void PipeLine::MoveLatch(const PipeState & destination, const PipeState & source)
 {
   for(auto i = 0; i < NUM_OF_LATCHES; i++)
@@ -337,6 +356,10 @@ void PipeLine::UpdateHistory()
   // (or the current latch was invalid). This prevents creating duplicate rows for stalls.
   if (latch(DECODE, NEW_PS).V) {
       bool is_new_instruction = false;
+      // A simple check to see if this PC is already the last one in our history.
+      if (instruction_history.empty() || instruction_history.back().pc != (latch(DECODE, NEW_PS).NPC.to_num() - 2)) {
+          is_new_instruction = true;
+      }
       if (!latch(DECODE, PS).V || (latch(DECODE, PS).NPC.to_num() != latch(DECODE, NEW_PS).NPC.to_num())) {
           is_new_instruction = true;
       }
@@ -349,11 +372,20 @@ void PipeLine::UpdateHistory()
       }
   }
 
+  auto & micro_sequencer = simulator().microsequencer();
+
   // Update history for all instructions based on where they are in the CURRENT pipeline state (PS)
   for (auto& inst_trace : instruction_history) {
       std::string stage_char = " "; // Default to blank
       if      (latch(STORE, PS).V  && (latch(STORE, PS).NPC.to_num()  - 2 == inst_trace.pc)) stage_char = "S";
-      else if (latch(MEMORY, PS).V && (latch(MEMORY, PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "M";
+      else if (latch(MEMORY, PS).V && (latch(MEMORY, PS).NPC.to_num() - 2 == inst_trace.pc)) {
+          stage_char = "M";
+          // Check if this instruction is performing a memory access in this cycle
+          if (micro_sequencer.Get_DCACHE_EN(latch(MEMORY, PS).MEM_CS)) {
+              inst_trace.mem_addr = latch(MEMORY, PS).ADDRESS.to_num();
+              inst_trace.mem_addr_valid = true;
+          }
+      }
       else if (latch(AGEX, PS).V   && (latch(AGEX, PS).NPC.to_num()   - 2 == inst_trace.pc)) stage_char = "E";
       else if (latch(DECODE, PS).V && (latch(DECODE, PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "D";
       else if (inst_trace.cycle_history.empty()) stage_char = "F";
