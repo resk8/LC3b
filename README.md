@@ -2,7 +2,7 @@
 
 # LC-3b Pipelined Simulator
 
-A cycle-accurate simulator for the LC-3b (Little Computer 3, byte-addressable) ISA with a 5-stage pipeline implementation. This simulator provides detailed visualization of instruction flow through the pipeline, including hazard detection and resolution.
+A cycle-accurate simulator for the LC-3b (Little Computer 3b, byte-addressable) ISA with a 5-stage pipeline implementation. This simulator provides detailed visualization of instruction flow through the pipeline, including hazard detection and resolution.
 
 ## Table of Contents
 - [Features](#features)
@@ -15,7 +15,7 @@ A cycle-accurate simulator for the LC-3b (Little Computer 3, byte-addressable) I
 
 ## Features
 
-- **5-Stage Pipeline**: Implements Fetch, Decode, Execute, Memory, and Store stages
+- **5-Stage Pipeline**: Implements Fetch, Decode, Execute, Memory, and Writeback stages
 - **Microcoded Control**: Control logic driven by a microcode file ([`doc/test/ucode`](doc/test/ucode))
 - **Hazard Detection & Resolution**:
   - **Data Hazards**: Detects Read-After-Write (RAW) dependencies and inserts pipeline stalls
@@ -34,14 +34,24 @@ The simulator models a classic RISC pipeline with the following stages:
 | **DE**   | Decode  | Decodes instruction, reads registers, detects dependencies |
 | **AGEX** | Execute | Performs ALU operations or address calculations          |
 | **MEM**  | Memory  | Accesses D-Cache for loads/stores, resolves branches    |
-| **SR**   | Store   | Writes results back to register file                     |
+| **SR**   | Writeback | Writes results back to register file                   |
 
 ### Pipeline Implementation Details
 
 - **Register File**: 8 general-purpose registers (R0-R7)
 - **Condition Codes**: N (Negative), Z (Zero), P (Positive)
-- **Memory**: 32K words (16-bit word addressable)
-- **Data Path**: Implements forwarding paths (configurable via microcode)
+- **Memory**: 128KB byte-addressable (64K words, 16-bit word addressable)
+- **Instruction Format**: 16-bit instructions
+- **Data Path**: Implements dependency checking and stall logic
+
+### LC-3b vs LC-3 Differences
+
+The LC-3b extends the original LC-3 with:
+- **Byte-addressable memory** (addresses refer to bytes, not words)
+- **Word and byte load/store instructions** (LDW/STW, LDB/STB)
+- **Modified addressing modes** for byte-addressable memory
+- **SHF instruction** (shift left/right logical and arithmetic)
+- **Modified instruction encodings** to accommodate byte operations
 
 ## Building the Project
 
@@ -107,14 +117,14 @@ The simulator's most powerful feature is its detailed timing diagram, saved to `
 PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   | C4   | ...
 --------+-------------------------------+-----------+------+------+------+------+------+----
 0x3000  | LEA R0, #5                    |           | F    | D    | E    | M    | S    |
-0x3002  | LDW R1, R0, #0                | 0x300a    |      | F    | D*   | D*   | E    | M
+0x3002  | LDR R1, R0, #0                | 0x300a    |      | F    | D*   | D*   | E    | M
 ```
 
 ### Column Descriptions
 
-- **PC**: Program Counter value (instruction address)
+- **PC**: Program Counter value (instruction address in bytes)
 - **Instruction**: Disassembled assembly instruction
-- **Mem Addr**: Memory address accessed (for LDW/STW/LDB/STB only)
+- **Mem Addr**: Memory address accessed (for LDR/STR/LDB/STB only)
 - **Cn**: Cycle number columns showing pipeline stage
 
 ### Stage Indicators
@@ -125,7 +135,7 @@ PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   
 | `D`                 | Decode stage                                     |
 | `E`                 | Execute stage                                    |
 | `M`                 | Memory stage                                     |
-| `S`                 | Store (writeback) stage                          |
+| `S`                 | Writeback stage                                  |
 | `D*`, `E*`, `M*`    | Stalled in that stage                            |
 | (blank)             | Instruction not yet fetched or already retired   |
 
@@ -136,10 +146,10 @@ Consider this LC-3b assembly program:
 ```assembly
 .ORIG x3000
         LEA R0, DATA    ; Load address of DATA
-        LDW R1, R0, #0  ; Load value from memory → R1
+        LDR R1, R0, #0  ; Load value from memory → R1
         ADD R2, R1, #5  ; R2 = R1 + 5 (depends on R1)
         ADD R3, R2, #3  ; R3 = R2 + 3 (depends on R2)
-        STW R3, R0, #1  ; Store R3 to memory
+        STR R3, R0, #2  ; Store R3 to memory
         HALT
 DATA:   .FILL x000A
 ```
@@ -150,10 +160,10 @@ DATA:   .FILL x000A
 PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   | C4   | C5   | C6   | C7   | C8   | C9   | C10  | C11  | C12  |
 --------+-------------------------------+-----------+------+------+------+------+------+------+------+------+------+------+------+------+------+
 0x3000  | LEA R0, #5                    |           | F    | D    | E    | M    | S    |      |      |      |      |      |      |      |      |
-0x3002  | LDW R1, R0, #0                | 0x300c    |      | F    | D    | D*   | E    | M    | S    |      |      |      |      |      |      |
+0x3002  | LDR R1, R0, #0                | 0x300c    |      | F    | D    | D*   | E    | M    | S    |      |      |      |      |      |      |
 0x3004  | ADD R2, R1, #5                |           |      |      | F    | D    | D*   | D*   | E    | M    | S    |      |      |      |      |
 0x3006  | ADD R3, R2, #3                |           |      |      |      | F    | D    | D*   | D*   | D*   | E    | M    | S    |      |      |
-0x3008  | STW R3, R0, #1                | 0x300e    |      |      |      |      | F    | D    | D*   | D*   | D*   | D*   | E    | M    | S    |
+0x3008  | STR R3, R0, #2                | 0x300e    |      |      |      |      | F    | D    | D*   | D*   | D*   | D*   | E    | M    | S    |
 0x300a  | HALT                          |           |      |      |      |      |      | F    | D    | D*   | D*   | D*   | D*   | E    | M    |
 ```
 
@@ -162,25 +172,26 @@ PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   
 **Cycle-by-Cycle Breakdown:**
 
 1. **C0**: `LEA` enters Fetch
-2. **C1**: `LEA` moves to Decode, `LDW` enters Fetch
-3. **C2**: `LEA` in Execute, `LDW` in Decode, `ADD R2` enters Fetch
+2. **C1**: `LEA` moves to Decode, `LDR` enters Fetch
+3. **C2**: `LEA` in Execute, `LDR` in Decode, `ADD R2` enters Fetch
 4. **C3**: 
-   - `LEA` in Memory, `LDW` **stalled** in Decode (`D*`)
-   - Reason: `LDW` needs R0, which `LEA` hasn't written yet
+   - `LEA` in Memory, `LDR` **stalled** in Decode (`D*`)
+   - Reason: `LDR` needs R0, which `LEA` hasn't written yet (RAW hazard)
 5. **C4**: 
-   - `LEA` completes in Store, `LDW` proceeds to Execute
+   - `LEA` completes in Writeback, `LDR` proceeds to Execute
    - `ADD R2` **stalled** in Decode (`D*`)
-   - Reason: `ADD R2` needs R1, which `LDW` is still loading
-6. **C5-C6**: `LDW` continues through Memory and Store
+   - Reason: `ADD R2` needs R1, which `LDR` is still loading (load-use hazard)
+6. **C5-C6**: `LDR` continues through Memory and Writeback
 7. **C7**: `ADD R2` finally proceeds to Execute after R1 is available
 8. **C8**: `ADD R3` **stalled** waiting for R2 from previous `ADD`
 9. **C9-C10**: Cascading stalls continue as dependencies resolve
-10. **C11**: `STW` enters Execute with all dependencies resolved
+10. **C11**: `STR` enters Execute with all dependencies resolved
 
 **Key Observations:**
 
 - **Data Dependency Stalls**: The `D*` markers show where instructions wait for register values
-- **Memory Address Tracking**: The `Mem Addr` column shows `0x300c` for `LDW` and `0x300e` for `STW`
+- **Load-Use Hazard**: Most expensive - 2 cycle stall when next instruction needs loaded data
+- **Memory Address Tracking**: The `Mem Addr` column shows byte addresses for memory operations
 - **Pipeline Efficiency**: Total cycles = 12, vs. 6 instructions × 5 stages = 30 cycles (if fully serialized)
 - **Stall Propagation**: Each dependency causes a "bubble" that propagates through the pipeline
 
@@ -209,9 +220,14 @@ LC3b/
 │   ├── PipeLine.cpp     # Core pipeline simulation
 │   ├── Simulator.cpp
 │   └── State.cpp
-├── doc/test/
-│   ├── ucode            # Microcode control store ROM
-│   └── dumpsim.txt      # Generated timing diagram output
+├── doc/
+│   ├── Lc3b isa.pdf     # ISA specification
+│   ├── lc3b uarch.pdf   # Microarchitecture details
+│   ├── lc3b.pdf         # Overview
+│   ├── LC3-Pipelining.pdf # Pipeline design
+│   └── test/
+│       ├── ucode        # Microcode control store ROM
+│       └── dumpsim.txt  # Generated timing diagram output
 └── build/                # CMake build directory
 ```
 
@@ -273,8 +289,10 @@ This project is available for educational purposes. Please check with the origin
 
 ## References
 
-- [LC-3b ISA Specification](https://www.cs.utexas.edu/users/fussell/courses/cs310h/lectures/Lecture_15-310h.pdf)
-- [Pipelined Processor Design](https://www.cs.utexas.edu/~yale/cs352h/lectures/Pipelining.pdf)
+- [LC-3b ISA Specification](doc/Lc3b%20isa.pdf) - Complete instruction set architecture documentation
+- [LC-3b Microarchitecture](doc/lc3b%20uarch.pdf) - Detailed microarchitecture and datapath design
+- [LC-3b Overview](doc/lc3b.pdf) - General overview of the LC-3b architecture
+- [LC-3 Pipelining](doc/LC3-Pipelining.pdf) - Pipeline implementation and hazard handling
 
 ---
 
