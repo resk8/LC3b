@@ -34,6 +34,7 @@ Instruction::Instruction(Simulator & instance, const bits16 & instruction_bits) 
     //  Disassemble the instruction as soon as it's created.
     disassembly = Disassembler::disassemble(instruction_bits);    
     //  Initialize other data fields to a known state.
+    PC = 0;
     IR = instruction_bits;
     NPC = 0;
     DATA = 0;
@@ -43,4 +44,30 @@ Instruction::Instruction(Simulator & instance, const bits16 & instruction_bits) 
     ADDRESS = 0;
     DRID = 0;
     CC = 0;
+    
+    // Initialize pipeline tracking
+    fetch_cycle = -1;
+    mem_addr = 0;
+    mem_addr_valid = false;
+    current_stage = "";
+}
+
+/**
+ * @brief Record the stage an instruction is in for a given cycle
+ * 
+ * @param cycle The current cycle number
+ * @param stage The stage symbol (F, D, E, M, S)
+ */
+void Instruction::recordStage(int cycle, const std::string& stage) {
+    cycle_history[cycle] = stage;
+}
+
+/**
+ * @brief Record a stall in the current stage
+ * 
+ * @param cycle The current cycle number
+ * @param stage The stage symbol with stall marker (D*, E*, M*)
+ */
+void Instruction::recordStall(int cycle, const std::string& stage) {
+    cycle_history[cycle] = stage + "*";
 }

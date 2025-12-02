@@ -9,6 +9,7 @@ A cycle-accurate simulator for the LC-3b (Little Computer 3b, byte-addressable) 
 - [The 5-Stage Pipeline](#the-5-stage-pipeline)
 - [Building the Project](#building-the-project)
 - [Running the Simulator](#running-the-simulator)
+- [LC-3b Assembler](#lc-3b-assembler)
 - [Pipeline Timing Diagram](#pipeline-timing-diagram)
 - [Project Structure](#project-structure)
 - [Understanding the Microcode](#understanding-the-microcode)
@@ -23,6 +24,7 @@ A cycle-accurate simulator for the LC-3b (Little Computer 3b, byte-addressable) 
 - **Cache Simulation**: Models instruction and data caches with variable latency
 - **Detailed Timing Diagram**: Generates cycle-by-cycle visualization in `dumpsim.txt`
 - **Instruction Disassembly**: Human-readable instruction format in output
+- **Note**: RTI (Return from Interrupt) instruction is not yet supported in the simulator
 
 ## The 5-Stage Pipeline
 
@@ -106,6 +108,110 @@ Once running, the simulator provides an interactive shell:
 | `cdump`           | Dump control store (microcode)                   |
 | `?`               | Display help menu                                |
 | `quit`            | Exit simulator                                   |
+
+## LC-3b Assembler
+
+This project includes a full-featured LC-3b assembler that converts assembly language programs (`.asm`) into object files (`.obj`) that can be executed by the simulator.
+
+### Assembler Features
+
+- **Two-Pass Assembly**: First pass builds symbol table, second pass generates machine code
+- **Complete Instruction Set**: Supports all LC-3b instructions (ADD, AND, BR variants, JSR/JSRR, LDW/STW, LDB/STB, LEA, shifts, XOR, TRAP, JMP, RTI)
+- **Assembler Directives**: `.ORIG`, `.END`, `.FILL`, `.BLKW`, `.STRINGZ`
+- **Label Support**: Both colon-style (`LOOP:`) and standalone labels
+- **Multiple Number Formats**: 
+  - Decimal immediates: `#5`, `#-10`
+  - Hexadecimal: `x3000`, `0x3000`, `X3000`
+- **PC-Relative Addressing**: Automatic offset calculation for branches and LEA instructions
+- **Error Reporting**: Line-numbered error messages with detailed diagnostics
+- **Symbol Table Display**: Shows all labels and their addresses
+
+### Assembler Usage
+
+```bash
+python3 doc/test/lc3b_assembler.py <input.asm> [output.obj]
+```
+
+If output filename is not specified, it will be automatically generated (e.g., `program.asm` → `program.obj`).
+
+### Example Assembly Program
+
+Create a file `program.asm`:
+
+```assembly
+; Example: Calculate 5 * 15 using repeated addition
+        .ORIG x3000
+
+        AND R0, R0, #0      ; Clear R0
+        ADD R0, R0, #5      ; R0 = 5
+        ADD R1, R0, #10     ; R1 = 15
+        
+        ; Multiply R0 * R1 into R4
+        AND R4, R4, #0      ; R4 = 0 (accumulator)
+        ADD R5, R0, R0      ; R5 = R0 (counter)
+        
+LOOP    BRz END             ; If counter == 0, exit
+        ADD R4, R4, R1      ; R4 += R1
+        ADD R5, R5, #-1     ; Decrement counter
+        BRnzp LOOP          ; Loop back
+        
+END     LEA R2, RESULT      ; Get address for result
+        STW R4, R2, #0      ; Store result
+        HALT
+
+RESULT  .FILL x0000         ; Storage location
+        .END
+```
+
+### Assemble and Run
+
+```bash
+# Assemble the program
+python3 doc/test/lc3b_assembler.py program.asm
+
+# Run in simulator
+./build/source/lC3b doc/test/ucode program.obj
+```
+
+The assembler will output:
+
+```
+Assembling program.asm...
+Successfully assembled 14 instructions
+Output written to program.obj
+Origin: 0x3000
+Labels found: 3
+Symbol table:
+  END                  = 0x3018
+  LOOP                 = 0x3010
+  RESULT               = 0x301A
+```
+
+### Supported Instructions
+
+| Category          | Instructions                                    |
+|-------------------|-------------------------------------------------|
+| **Arithmetic**    | ADD, AND, XOR                                   |
+| **Memory**        | LDW, STW, LDB, STB, LEA                         |
+| **Control Flow**  | BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp     |
+| **Subroutines**   | JSR, JSRR, JMP, RET                             |
+| **Shifts**        | LSHF, RSHFL, RSHFA                              |
+| **System**        | TRAP, HALT                                      |
+
+**Note**: The assembler supports RTI syntax, but the RTI instruction is not yet implemented in the simulator.
+
+### Assembler Error Checking
+
+The assembler performs comprehensive syntax and semantic checking:
+
+- **Invalid registers**: Detects registers outside R0-R7
+- **Immediate out of range**: Checks that immediates fit in their bit fields
+- **Undefined labels**: Reports references to labels that don't exist
+- **Duplicate labels**: Prevents multiple definitions of the same label
+- **Branch offset overflow**: Ensures branch targets are within range
+- **Malformed instructions**: Validates operand count and types
+
+
 
 ## Pipeline Timing Diagram
 

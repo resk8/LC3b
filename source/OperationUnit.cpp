@@ -14,21 +14,24 @@
 // TODO: add some way to identify which latch is being passed. Currently assume its always AGEX
 std::unique_ptr<OperationUnit> OperationUnit::MakeUnit(Latch & latch)
 {   
+    auto inst = latch.instruction;
+    if (!inst) return nullptr;
+    
     auto alu_result_mux = latch.AGEX_CS[AGEX_ALU_RESULTMUX];
     if(alu_result_mux) 
     {
         bits16 input2;
         auto sr2_mux = latch.AGEX_CS[AGEX_SR2MUX];
         if(sr2_mux)
-            input2 = latch.IR.range<4,0>().sign_ext();
+            input2 = inst->IR.range<4,0>().sign_ext();
         else
-            input2 = latch.SR2;
+            input2 = inst->SR2;
 
         auto aluk = (latch.AGEX_CS[AGEX_ALUK1] << 1) + latch.AGEX_CS[AGEX_ALUK0];
-        return std::make_unique<Alu>(latch.SR1,input2,aluk);
+        return std::make_unique<Alu>(inst->SR1,input2,aluk);
     }
     else
-        return std::make_unique<Shifter>(latch.SR1,latch.IR.range<5,0>());
+        return std::make_unique<Shifter>(inst->SR1,inst->IR.range<5,0>());
     
 }
 

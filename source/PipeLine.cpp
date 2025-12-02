@@ -285,7 +285,8 @@ bool PipeLine::CheckForDataDependencies()
 
   // check for dependecy if no stalls
   // were detected in the fetch stage
-  if(de_latch.V)
+  auto inst_de = de_latch.instruction;
+  if(inst_de && de_latch.V)
   {
     auto & de_sig = cpu_state.DecodeSignals();
     auto & agex_sig = cpu_state.AgexSignals();
@@ -354,20 +355,24 @@ void PipeLine::UpdateHistory()
   // A new instruction has been successfully fetched if it's valid in the next
   // DECODE latch, AND it's different from what was in the current DECODE latch
   // (or the current latch was invalid). This prevents creating duplicate rows for stalls.
-  if (latch(DECODE, NEW_PS).V) {
+  auto & de_new_latch = latch(DECODE, NEW_PS);
+  auto de_new_inst = de_new_latch.instruction;
+  if (de_new_inst && de_new_latch.V) {
       bool is_new_instruction = false;
       // A simple check to see if this PC is already the last one in our history.
-      if (instruction_history.empty() || instruction_history.back().pc != (latch(DECODE, NEW_PS).NPC.to_num() - 2)) {
+      if (instruction_history.empty() || instruction_history.back().pc != (de_new_inst->NPC.to_num() - 2)) {
           is_new_instruction = true;
       }
-      if (!latch(DECODE, PS).V || (latch(DECODE, PS).NPC.to_num() != latch(DECODE, NEW_PS).NPC.to_num())) {
+      auto & de_curr_latch = latch(DECODE, PS);
+      auto de_curr_inst = de_curr_latch.instruction;
+      if (!de_curr_inst || !de_curr_latch.V || (de_curr_inst->NPC.to_num() != de_new_inst->NPC.to_num())) {
           is_new_instruction = true;
       }
 
       if (is_new_instruction) {
           InstructionTrace new_trace;
-          new_trace.pc = latch(DECODE, NEW_PS).NPC.to_num() - 2;
-          new_trace.disassembled = disassembler.disassemble(latch(DECODE, NEW_PS).IR);
+          new_trace.pc = de_new_inst->NPC.to_num() - 2;
+          new_trace.disassembled = disassembler.disassemble(de_new_inst->IR);
           instruction_history.push_back(new_trace);
       }
   }
@@ -377,23 +382,77 @@ void PipeLine::UpdateHistory()
   // Update history for all instructions based on where they are in the CURRENT pipeline state (PS)
   for (auto& inst_trace : instruction_history) {
       std::string stage_char = " "; // Default to blank
-      if      (latch(STORE, PS).V  && (latch(STORE, PS).NPC.to_num()  - 2 == inst_trace.pc)) stage_char = "S";
-      else if (latch(MEMORY, PS).V && (latch(MEMORY, PS).NPC.to_num() - 2 == inst_trace.pc)) {
-          stage_char = "M";
-          // Check if this instruction is performing a memory access in this cycle
-          if (micro_sequencer.Get_DCACHE_EN(latch(MEMORY, PS).MEM_CS)) {
-              inst_trace.mem_addr = latch(MEMORY, PS).ADDRESS.to_num();
-              inst_trace.mem_addr_valid = true;
-          }
+      std::shared_ptr<Instruction> current_inst = nullptr;
+      
+      // Check each pipeline stage for this instruction
+      auto & sr_latch = latch(STORE, PS);
+      auto & mem_latch_hist = latch(MEMORY, PS);
+      auto & agex_latch_hist = latch(AGEX, PS);
+      auto & de_latch_hist = latch(DECODE, PS);
+      
+      auto sr_inst = sr_latch.instruction;
+      auto mem_inst = mem_latch_hist.instruction;
+      auto agex_inst = agex_latch_hist.instruction;
+      auto de_inst = de_latch_hist.instruction;
+      
+      // Find which stage contains this instruction by matching PC
+      if (sr_inst && sr_latch.V && (sr_inst->NPC.to_num() - 2 == inst_trace.pc)) {
+          current_inst = sr_inst;
+          stage_char = current_inst->current_stage;
+          current_inst->recordStage(current_cycle, stage_char);
       }
-      else if (latch(AGEX, PS).V   && (latch(AGEX, PS).NPC.to_num()   - 2 == inst_trace.pc)) stage_char = "E";
-      else if (latch(DECODE, PS).V && (latch(DECODE, PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "D";
-      else if (inst_trace.cycle_history.empty()) stage_char = "F";
+      else if (mem_inst && mem_latch_hist.V && (mem_inst->NPC.to_num() - 2 == inst_trace.pc)) {
+          current_inst = mem_inst;
+          stage_char = current_inst->current_stage;
+          // Check if this instruction is performing a memory access in this cycle
+          if (micro_sequencer.Get_DCACHE_EN(mem_inst->MEM_CS)) {
+              inst_trace.mem_addr = mem_inst->ADDRESS.to_num();
+              inst_trace.mem_addr_valid = true;
+              mem_inst->mem_addr = inst_trace.mem_addr;
+              mem_inst->mem_addr_valid = true;
+          }
+          current_inst->recordStage(current_cycle, stage_char);
+      }
+      else if (agex_inst && agex_latch_hist.V && (agex_inst->NPC.to_num() - 2 == inst_trace.pc)) {
+          current_inst = agex_inst;
+          stage_char = current_inst->current_stage;
+          current_inst->recordStage(current_cycle, stage_char);
+      }
+      else if (de_inst && de_latch_hist.V && (de_inst->NPC.to_num() - 2 == inst_trace.pc)) {
+          current_inst = de_inst;
+          stage_char = current_inst->current_stage;
+          current_inst->recordStage(current_cycle, stage_char);
+      }
+      else if (inst_trace.cycle_history.empty()) {
+          stage_char = "F";
+      }
 
       // Check for stalls by seeing if the instruction is still in the same stage in the *next* cycle
-      if (stage_char == "D" && latch(DECODE, NEW_PS).V && (latch(DECODE, NEW_PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "D*";
-      if (stage_char == "E" && latch(AGEX, NEW_PS).V   && (latch(AGEX, NEW_PS).NPC.to_num()   - 2 == inst_trace.pc)) stage_char = "E*";
-      if (stage_char == "M" && latch(MEMORY, NEW_PS).V && (latch(MEMORY, NEW_PS).NPC.to_num() - 2 == inst_trace.pc)) stage_char = "M*";
+      auto & de_new_latch_check = latch(DECODE, NEW_PS);
+      auto de_new_inst_check = de_new_latch_check.instruction;
+      auto & agex_new_latch = latch(AGEX, NEW_PS);
+      auto agex_new_inst = agex_new_latch.instruction;
+      auto & mem_new_latch = latch(MEMORY, NEW_PS);
+      auto mem_new_inst = mem_new_latch.instruction;
+      
+      if (stage_char == "D" && de_new_inst_check && de_new_latch_check.V && (de_new_inst_check->NPC.to_num() - 2 == inst_trace.pc)) {
+          stage_char = "D*";
+          if (de_inst) {
+              de_inst->recordStall(current_cycle, "D");
+          }
+      }
+      if (stage_char == "E" && agex_new_inst && agex_new_latch.V && (agex_new_inst->NPC.to_num() - 2 == inst_trace.pc)) {
+          stage_char = "E*";
+          if (agex_inst) {
+              agex_inst->recordStall(current_cycle, "E");
+          }
+      }
+      if (stage_char == "M" && mem_new_inst && mem_new_latch.V && (mem_new_inst->NPC.to_num() - 2 == inst_trace.pc)) {
+          stage_char = "M*";
+          if (mem_inst) {
+              mem_inst->recordStall(current_cycle, "M");
+          }
+      }
 
       inst_trace.cycle_history[current_cycle] = stage_char;
   }
@@ -406,33 +465,38 @@ void PipeLine::SR_stage()
   auto & micro_sequencer =  simulator().microsequencer();
   auto & sr_sig = simulator().state().SrSignals();
   auto & store_latch = latch(STORE,PS);
+  auto inst = store_latch.instruction;
+  
   /* You are given the code for SR_stage to get you started. Look at
      the figure for store_signals stage to see how this code is implemented. */
 
-  switch (micro_sequencer.Get_DR_VALUEMUX(store_latch.SR_CS).to_num())
-  {
-  case 0:
-    sr_sig.sr_reg_data = store_latch.ADDRESS;
-    break;
-  case 1:
-    sr_sig.sr_reg_data = store_latch.DATA;
-    break;
-  case 2:
-    sr_sig.sr_reg_data = store_latch.NPC;
-    break;
-  case 3:
-    sr_sig.sr_reg_data = store_latch.ALU_RESULT;
-    break;
+  if (inst) {
+    inst->current_stage = "S";
+    switch (micro_sequencer.Get_DR_VALUEMUX(inst->SR_CS).to_num())
+    {
+    case 0:
+      sr_sig.sr_reg_data = inst->ADDRESS;
+      break;
+    case 1:
+      sr_sig.sr_reg_data = inst->DATA;
+      break;
+    case 2:
+      sr_sig.sr_reg_data = inst->NPC;
+      break;
+    case 3:
+      sr_sig.sr_reg_data = inst->ALU_RESULT;
+      break;
+    }
+
+    sr_sig.sr_drid = inst->DRID;
+    sr_sig.v_sr_ld_reg = micro_sequencer.Get_SR_LD_REG(inst->SR_CS) & store_latch.V;
+    sr_sig.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(inst->SR_CS) & store_latch.V;
+
+    /* CC LOGIC  */
+    sr_sig.sr_n = sr_sig.sr_reg_data[15];
+    sr_sig.sr_z = ((sr_sig.sr_reg_data.to_num() == 0) ? 1 : 0);
+    sr_sig.sr_p = ((!sr_sig.sr_n) && (!sr_sig.sr_z));
   }
-
-  sr_sig.sr_drid = store_latch.DRID;
-  sr_sig.v_sr_ld_reg = micro_sequencer.Get_SR_LD_REG(store_latch.SR_CS) & store_latch.V;
-  sr_sig.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(store_latch.SR_CS) & store_latch.V ;
-
-  /* CC LOGIC  */
-  sr_sig.sr_n = sr_sig.sr_reg_data[15];
-  sr_sig.sr_z = ((sr_sig.sr_reg_data.to_num() == 0) ? 1 : 0);
-  sr_sig.sr_p = ((!sr_sig.sr_n) && (!sr_sig.sr_z));
 }
 
 /************************* MEM_stage() *************************/
@@ -441,18 +505,26 @@ void PipeLine::MEM_stage()
   SetStage(MEMORY);
   auto & store_latch = latch(STORE,NEW_PS);
   auto & memory_latch = latch(MEMORY,PS);
+  auto inst = memory_latch.instruction;
   auto & main_memory = simulator().memory();
   auto & memory_sig = simulator().state().MemSignals();
   auto & stall_sig = simulator().state().Stall();
   auto & micro_seq = simulator().microsequencer();
 
+  if (!inst) {
+    // No instruction in MEMORY - this shouldn't happen, but handle gracefully
+    return;
+  }
+  
+  inst->current_stage = "M";
+  
   //access aligment logic
-  auto alignment_needed = memory_latch.ADDRESS[0];
-  auto data_size = micro_seq.Get_DATA_SIZE(memory_latch.MEM_CS);
+  auto alignment_needed = inst->ADDRESS[0];
+  auto data_size = micro_seq.Get_DATA_SIZE(inst->MEM_CS);
   bits16 MDR_IN;
   if(!data_size) //byte access
   {
-    bits8 alu_result = memory_latch.ALU_RESULT.range<7,0>();
+    bits8 alu_result = inst->ALU_RESULT.range<7,0>();
     if(alignment_needed)
       MDR_IN.range<15,8>() = alu_result.range<7,0>();
     else
@@ -465,7 +537,7 @@ void PipeLine::MEM_stage()
     }
   }
   else //wrod access
-    MDR_IN = memory_latch.ALU_RESULT;
+    MDR_IN = inst->ALU_RESULT;
 
   //read/write enable logic
   auto read_write_en = micro_seq.Get_DCACHE_RW(memory_latch.MEM_CS);
@@ -490,27 +562,28 @@ void PipeLine::MEM_stage()
   //data cache access
   bits16 MDR_OUT;
   bool data_cache_r = false;
-  auto cache_en = micro_seq.Get_DCACHE_EN(memory_latch.MEM_CS) && memory_latch.V;
+  auto & memory_latch_ps = latch(MEMORY, PS);
+  auto cache_en = micro_seq.Get_DCACHE_EN(inst->MEM_CS) && memory_latch_ps.V;
   if(cache_en)
-    main_memory.dcache_access(memory_latch.ADDRESS, MDR_OUT, MDR_IN, data_cache_r, we_low, we_high);
+    main_memory.dcache_access(inst->ADDRESS, MDR_OUT, MDR_IN, data_cache_r, we_low, we_high);
   else
     data_cache_r = true; //no stall since memory was not even accessed
 
   //memory signals for fetch stage
-  memory_sig.target_pc = memory_latch.ADDRESS;
-  memory_sig.mem_drid = memory_latch.DRID;
+  memory_sig.target_pc = inst->ADDRESS;
+  memory_sig.mem_drid = inst->DRID;
   stall_sig.mem_stall = cache_en && (!data_cache_r);
 
   //Branch Logic
-  auto memory_v = memory_latch.V;
+  auto memory_v = memory_latch_ps.V;
   if(memory_v)
   {
-    auto is_branch_op = micro_seq.Get_BR_OP(memory_latch.MEM_CS);
-    auto is_trap_op = micro_seq.Get_TRAP_OP(memory_latch.MEM_CS);
+    auto is_branch_op = micro_seq.Get_BR_OP(inst->MEM_CS);
+    auto is_trap_op = micro_seq.Get_TRAP_OP(inst->MEM_CS);
     if(is_branch_op)
     {
-      bits3 br_intr_nzp = memory_latch.IR.range<11,9>();
-      bits3 cpu_nzp = memory_latch.CC;
+      bits3 br_intr_nzp = inst->IR.range<11,9>();
+      bits3 cpu_nzp = inst->CC;
       if(((br_intr_nzp[2] & cpu_nzp[2]) == 1) || // N
          ((br_intr_nzp[1] & cpu_nzp[1]) == 1) || // Z
          ((br_intr_nzp[0] & cpu_nzp[0]) == 1))   // P
@@ -547,23 +620,20 @@ void PipeLine::MEM_stage()
   }
 
   //check for dependencies
-  memory_sig.v_mem_ld_cc = memory_v && micro_seq.Get_MEM_LD_CC(memory_latch.MEM_CS);
-  memory_sig.v_mem_ld_reg = memory_v && micro_seq.Get_MEM_LD_REG(memory_latch.MEM_CS);
-  stall_sig.v_mem_br_stall = memory_v && micro_seq.Get_MEM_BR_STALL(memory_latch.MEM_CS);
+  memory_sig.v_mem_ld_cc = memory_v && micro_seq.Get_MEM_LD_CC(inst->MEM_CS);
+  memory_sig.v_mem_ld_reg = memory_v && micro_seq.Get_MEM_LD_REG(inst->MEM_CS);
+  stall_sig.v_mem_br_stall = memory_v && micro_seq.Get_MEM_BR_STALL(inst->MEM_CS);
 
-  //load SR latch
-  store_latch.ADDRESS = memory_latch.ADDRESS;
-  store_latch.DATA = memory_sig.trap_pc;
-  store_latch.NPC = memory_latch.NPC;
-  store_latch.ALU_RESULT = memory_latch.ALU_RESULT;
-  store_latch.IR = memory_latch.IR;
-  store_latch.DRID = memory_latch.DRID;
-
+  //load SR latch - only control signals
   /* The code below propagates the control signals from memory_sigs.CS latch
-     to store_signals.CS latch. You still need to latch other values into the
-     other store_signals latches. */
-  store_latch.SR_CS = memory_latch.MEM_CS.range<10,7>();
-  store_latch.V = memory_v && (!stall_sig.mem_stall);
+     to store_signals.CS latch. */
+  inst->SR_CS = inst->MEM_CS.range<10,7>();
+  
+  // Propagate instruction object and update its data fields
+  bool store_valid = memory_v && (!stall_sig.mem_stall);
+  store_latch.instruction = inst;
+  store_latch.V = store_valid;
+  inst->DATA = memory_sig.trap_pc;
 }
 
 /************************* AGEX_stage() *************************/
@@ -572,74 +642,82 @@ void PipeLine::AGEX_stage()
   SetStage(AGEX);
   auto & memory_latch = latch(MEMORY,NEW_PS);
   auto & agex_latch = latch(AGEX,PS);
+  auto inst = agex_latch.instruction;
   auto & agex_sig = simulator().state().AgexSignals();
   auto & stall_sig = simulator().state().Stall();
   auto & micro_seq = simulator().microsequencer();
 
+  if (!inst) {
+    // No instruction in AGEX - this shouldn't happen, but handle gracefully
+    return;
+  }
+  
+  inst->current_stage = "E";
+  
   /* your code for agex_sigs stage goes here */
   // First program counter mux
   bits16 next_pc_1;
-  if(micro_seq.Get_ADDR1MUX(agex_latch.AGEX_CS))
-    next_pc_1 = agex_latch.SR1;
+  if(micro_seq.Get_ADDR1MUX(inst->AGEX_CS))
+    next_pc_1 = inst->SR1;
   else
-    next_pc_1 = agex_latch.NPC;
+    next_pc_1 = inst->NPC;
 
   // second program counter mux
   // TODO: this might be broken because of the bit access to non_const overload
   bits16 next_pc_2;
-  auto agex_addr2mux = micro_seq.Get_ADDR2MUX(agex_latch.AGEX_CS);
+  auto agex_addr2mux = micro_seq.Get_ADDR2MUX(inst->AGEX_CS);
   switch (agex_addr2mux.to_num())
   {
   case 0:
     next_pc_2 = 0;
     break;
   case 1:
-    next_pc_2 = agex_latch.IR.sign_ext(5);
+    next_pc_2 = inst->IR.sign_ext(5);
     break;
   case 2:
-    next_pc_2 = agex_latch.IR.sign_ext(8);
+    next_pc_2 = inst->IR.sign_ext(8);
     break;
   case 3:
-    next_pc_2 = agex_latch.IR.sign_ext(10);
+    next_pc_2 = inst->IR.sign_ext(10);
     break;
   default:
     assert(true); //TODO: should not happen. add an exception?
   }
 
   //check if lshf1 signal is 1
-  if(micro_seq.Get_LSHF1(agex_latch.AGEX_CS))
+  if(micro_seq.Get_LSHF1(inst->AGEX_CS))
     next_pc_2 = next_pc_2 << 1;
 
   //generate next instruction address
   bits16 mem_address;
-  if(micro_seq.Get_ADDRESSMUX(agex_latch.AGEX_CS))
+  if(micro_seq.Get_ADDRESSMUX(inst->AGEX_CS))
     mem_address = next_pc_1 + next_pc_2;
   else
-    mem_address = agex_latch.IR.zero_ext(7) << 1;
+    mem_address = inst->IR.zero_ext(7) << 1;
 
   //Shifter or ALU generation
   bits16 alu_shifter_output;
-  if(micro_seq.Get_ALU_RESULTMUX(agex_latch.AGEX_CS)) //ALU operation
+  if(micro_seq.Get_ALU_RESULTMUX(inst->AGEX_CS)) //ALU operation
   {
     //determine the second input to the ALU
     bits16 input2;
-    if(micro_seq.Get_SR2MUX(agex_latch.AGEX_CS))
-        input2 = agex_latch.IR.sign_ext(4);
+    if(micro_seq.Get_SR2MUX(inst->AGEX_CS))
+        input2 = inst->IR.sign_ext(4);
     else
-        input2 = agex_latch.SR2;
+        input2 = inst->SR2;
 
     //perfom the operation based on the micro code of the current instruction
-    auto aluk = micro_seq.Get_ALUK(agex_latch.AGEX_CS);
+    auto aluk = micro_seq.Get_ALUK(inst->AGEX_CS);
     switch(aluk.to_num())
     {
       case 0:
-        alu_shifter_output = agex_latch.SR1 + input2;
+        alu_shifter_output = inst->SR1 + input2;
         break;
       case 1:
-        alu_shifter_output = agex_latch.SR1 & input2;
+        alu_shifter_output = inst->SR1 & input2;
         break;
       case 2:
-        alu_shifter_output = agex_latch.SR1 ^ input2;
+        alu_shifter_output = inst->SR1 ^ input2;
         break;
       case 3:
         alu_shifter_output = input2;
@@ -656,21 +734,21 @@ void PipeLine::AGEX_stage()
     //  RSHF [ 1, 1, 0, 1|   DR   |   SR   | 0| 1|   amount  ]
     // RSHFA [ 1, 1, 0, 1|   DR   |   SR   | 1| 1|   amount  ]
     //
-    auto shif_mux = agex_latch.IR.range<5,4>();
-    auto shift_amount = agex_latch.IR.range<3,0>();
+    auto shif_mux = inst->IR.range<5,4>();
+    auto shift_amount = inst->IR.range<3,0>();
     switch(shif_mux.to_num())
     {
       case 0: //LSHF
-        alu_shifter_output = agex_latch.SR1 << shift_amount.to_num();
+        alu_shifter_output = inst->SR1 << shift_amount.to_num();
         break;
       case 1: //RSHF
-        alu_shifter_output = agex_latch.SR1 >> shift_amount.to_num();
+        alu_shifter_output = inst->SR1 >> shift_amount.to_num();
         break;
       case 3: //RSHFA
       {
         //arithmetic right shift, will preserve the MSB when shifting
-        auto sr_15 = agex_latch.SR1[15];
-        alu_shifter_output = agex_latch.SR1 >> shift_amount.to_num();
+        auto sr_15 = inst->SR1[15];
+        alu_shifter_output = inst->SR1 >> shift_amount.to_num();
         for(auto i = 0; i < shift_amount.to_num(); ++i)
           alu_shifter_output[15-i] = sr_15;
         break;
@@ -681,28 +759,30 @@ void PipeLine::AGEX_stage()
   }
 
   //set signals needed for previous stage
-  agex_sig.agex_drid = agex_latch.DRID;
-  agex_sig.v_agex_ld_cc = agex_latch.V && micro_seq.Get_AGEX_LD_CC(agex_latch.AGEX_CS);
-  agex_sig.v_agex_ld_reg = agex_latch.V && micro_seq.Get_AGEX_LD_REG(agex_latch.AGEX_CS);
-  stall_sig.v_agex_br_stall = agex_latch.V && micro_seq.Get_AGEX_BR_STALL(agex_latch.AGEX_CS);
+  agex_sig.agex_drid = inst->DRID;
+  agex_sig.v_agex_ld_cc = agex_latch.V && micro_seq.Get_AGEX_LD_CC(inst->AGEX_CS);
+  agex_sig.v_agex_ld_reg = agex_latch.V && micro_seq.Get_AGEX_LD_REG(inst->AGEX_CS);
+  stall_sig.v_agex_br_stall = agex_latch.V && micro_seq.Get_AGEX_BR_STALL(inst->AGEX_CS);
 
   //Stall check
   auto LD_MEM = (stall_sig.mem_stall) ? 0 : 1;
 
   if (LD_MEM)
   {
-    /* Your code for latching into memory_sigs latches goes here */
-    memory_latch.ADDRESS = mem_address;
-    memory_latch.NPC = agex_latch.NPC;
-    memory_latch.CC = agex_latch.CC;
-    memory_latch.ALU_RESULT = alu_shifter_output;
-    memory_latch.IR = agex_latch.IR;
-    memory_latch.DRID = agex_latch.DRID;
+    /* Propagate control signals from agex_sigs.CS latch to memory_sigs.CS latch. */
+    inst->MEM_CS.range<10,0>() = inst->AGEX_CS.range<19,9>();
+    
+    // Propagate instruction object and V bit
+    memory_latch.instruction = inst;
     memory_latch.V = agex_latch.V;
-
-    /* The code below propagates the control signals from agex_sigs.CS latch
-       to memory_sigs.CS latch. */
-    memory_latch.MEM_CS.range<10,0>() = agex_latch.AGEX_CS.range<19,9>();
+    inst->ADDRESS = mem_address;
+    inst->ALU_RESULT = alu_shifter_output;
+  } else {
+    // mem_stall: Keep instruction in MEM by writing current MEM instruction to NEW_PS MEM latch
+    auto & current_mem_latch = latch(MEMORY, PS);
+    memory_latch.instruction = current_mem_latch.instruction;
+    memory_latch.MEM_CS = current_mem_latch.MEM_CS;
+    memory_latch.V = current_mem_latch.V;
   }
 }
 
@@ -715,12 +795,20 @@ void PipeLine::DE_stage()
   auto & stall = cpu_state.Stall();
   auto & micro_sequencer = simulator().microsequencer();
   auto & decode_latch = latch(DECODE,PS);
+  auto inst = decode_latch.instruction;
   auto & agex_latch = latch(AGEX,NEW_PS);
   bitfield<6> CONTROL_STORE_ADDRESS;
 
+  if (!inst) {
+    // No instruction in DECODE - this shouldn't happen, but handle gracefully
+    return;
+  }
+  
+  inst->current_stage = "D";
+  
   //get micro code state
-  CONTROL_STORE_ADDRESS.range<5,1>() = decode_latch.IR.range<15,11>();
-  CONTROL_STORE_ADDRESS[0] = decode_latch.IR[5];
+  CONTROL_STORE_ADDRESS.range<5,1>() = inst->IR.range<15,11>();
+  CONTROL_STORE_ADDRESS[0] = inst->IR[5];
   de_sig.de_ucode = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
 
   //The instruction in the decode_sigs stage also reads the register file and the condition codes.
@@ -730,7 +818,7 @@ void PipeLine::DE_stage()
   //decode_sigs.IR[11:9] or decode_sigs.IR[2:0]. 2At the end of the clock cycle, the SR1 value from the
   //register file is latched into the agex_sigs.SR1 latch, and the SR2 value is latched into the
   //agex_sigs.SR2 latch.
-  ProcessRegisterFile(decode_latch.IR);
+  ProcessRegisterFile(inst->IR);
 
   //The value of the condition codes is latched into the 3-bit agex_sigs.CC latch.
   //Condition code N is stored in agex_sigs.CC[2], Z is stored in agex_sigs.CC[1], and P is stored in
@@ -758,20 +846,28 @@ void PipeLine::DE_stage()
   auto LD_AGEX = (stall.mem_stall) ? 0 : 1;
   if (LD_AGEX)
   {
-    agex_latch.NPC = decode_latch.NPC;
-    agex_latch.IR = decode_latch.IR;
-    agex_latch.SR1 = de_sig.de_sr1_data;
-    agex_latch.SR2 = de_sig.de_sr2_data;
-    agex_latch.CC = de_sig.de_cc;
-    agex_latch.AGEX_CS.range<19,0>() = de_sig.de_ucode.range<22,3>();
-
-    if(micro_sequencer.Get_DRMUX(de_sig.de_ucode))
-      agex_latch.DRID = 0x7;
-    else
-      agex_latch.DRID = decode_latch.IR.range<11,9>();
+    // Propagate control signals to instruction
+    inst->AGEX_CS.range<19,0>() = de_sig.de_ucode.range<22,3>();
 
     /*agex_sigs Valid: valid if no stall or bubbles were detected*/
-    agex_latch.V = (!stall.dep_stall) && (decode_latch.V);
+    bool agex_valid = (!stall.dep_stall) && (decode_latch.V);
+    
+    // Always propagate instruction object and V bit
+    agex_latch.instruction = inst;
+    agex_latch.V = agex_valid;
+    inst->SR1 = de_sig.de_sr1_data;
+    inst->SR2 = de_sig.de_sr2_data;
+    inst->CC = de_sig.de_cc;
+    
+    if(micro_sequencer.Get_DRMUX(de_sig.de_ucode))
+      inst->DRID = 0x7;
+    else
+      inst->DRID = inst->IR.range<11,9>();
+  } else {
+    // mem_stall: Keep instruction in AGEX by writing current AGEX instruction to NEW_PS
+    auto & current_agex_latch = latch(AGEX, PS);
+    agex_latch.instruction = current_agex_latch.instruction;
+    agex_latch.V = current_agex_latch.V;
   }
 }
 
@@ -827,12 +923,24 @@ void PipeLine::FETCH_stage()
   auto ld_de = (stall.dep_stall || stall.mem_stall) ? 0 : 1;
   if(ld_de)
   {
-    decode_latch.IR = instruction;
-    decode_latch.NPC = de_npc;
-
     //decode_sigs.valid is 0 if stall was detected or a branch
     //was not taken. Ohterwise, stage is good to go
-    decode_latch.V = (!load_pc || stall.v_mem_br_stall) ? 0 : 1;
+    bool decode_valid = (!load_pc || stall.v_mem_br_stall) ? 0 : 1;
+    
+    // Always create instruction object - latch V bit indicates if it's valid or a bubble
+    auto new_instr = Instruction::Create(simulator(), instruction);
+    new_instr->PC = cpu_state.GetProgramCounter();
+    new_instr->IR = instruction;
+    new_instr->NPC = de_npc;
+    new_instr->fetch_cycle = simulator().GetCycles();
+    new_instr->current_stage = "F";
+    decode_latch.instruction = new_instr;
+    decode_latch.V = decode_valid;
+  } else {
+    // dep_stall or mem_stall: Keep instruction in DECODE by copying from PS
+    auto & current_decode_latch = latch(DECODE, PS);
+    decode_latch.instruction = current_decode_latch.instruction;
+    decode_latch.V = current_decode_latch.V;
   }
 }
 

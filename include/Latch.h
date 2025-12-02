@@ -9,7 +9,10 @@
     #include "../include/instruction.h"
 #else
     #include "LC3b.h"
+    #include "instruction.h"
 #endif
+
+class Instruction;
 
 class Latch
 {
@@ -19,16 +22,10 @@ class Latch
 
     void operator=(const Latch & latch);
 
-    //TODO: make some getters?
-    bits16 NPC;
-    bits16 DATA;
-    bits16 SR1;
-    bits16 SR2;
-    bits16 ALU_RESULT;
-    bits16 ADDRESS;
-    bits16 IR;
-    bits3 DRID;
-    bits3 CC;
+    // Shared pointer to the instruction object (manages all data signals)
+    std::shared_ptr<Instruction> instruction;
+    
+    // Valid bit - indicates if this latch contains a valid instruction or a bubble
     bool V;
 
     // Control signals for the stage this latch feeds.

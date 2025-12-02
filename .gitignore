@@ -2,6 +2,7 @@
 *.txt
 settings.json
 *.idx
+__pycache__/
 
 # Executables
 *.exe
