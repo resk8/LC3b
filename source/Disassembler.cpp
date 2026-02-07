@@ -57,7 +57,7 @@ std::string Disassembler::disassemble(bits16 instruction) {
             }
             return ss.str();
         }
-        case 0b0110: // LDR
+        case 0b0110: // LDW
         {
             auto dr = static_cast<int>(instruction.range<11, 9>().to_num());
             auto base_r = static_cast<int>(instruction.range<8, 6>().to_num());
@@ -66,10 +66,10 @@ std::string Disassembler::disassemble(bits16 instruction) {
             if (offset6_bits[5]) { // Check the 6th bit (the sign bit)
                 offset6 |= 0xFFC0; // Manually sign-extend to 16 bits
             }
-            ss << "LDR R" << dr << ", R" << base_r << ", #" << offset6;
+            ss << "LDW R" << dr << ", R" << base_r << ", #" << offset6;
             return ss.str();
         }
-        case 0b0111: // STR
+        case 0b0111: // STW
         {
             auto sr = static_cast<int>(instruction.range<11, 9>().to_num());
             auto base_r = static_cast<int>(instruction.range<8, 6>().to_num());
@@ -78,7 +78,7 @@ std::string Disassembler::disassemble(bits16 instruction) {
             if (offset6_bits[5]) { // Check the 6th bit (the sign bit)
                 offset6 |= 0xFFC0; // Manually sign-extend to 16 bits
             }
-            ss << "STR R" << sr << ", R" << base_r << ", #" << offset6;
+            ss << "STW R" << sr << ", R" << base_r << ", #" << offset6;
             return ss.str();
         }
         case 0b1000: // RTI

@@ -11,10 +11,10 @@
     
     ; Test 2: Memory Store
     LEA R2, DATA        ; R2 = address of DATA
-    STR R1, R2, #0      ; Store R1 (15) to memory
+    STW R1, R2, #0      ; Store R1 (15) to memory
     
     ; Test 3: Memory Load
-    LDR R3, R2, #0      ; Load from memory into R3 (R3 = 15)
+    LDW R3, R2, #0      ; Load from memory into R3 (R3 = 15)
     
     ; Test 4: Branch - Loop to multiply R0 * R1 (5 * 15 = 75)
     AND R4, R4, #0      ; R4 = 0 (accumulator)
@@ -29,7 +29,7 @@ LOOP:
 END:
     ; Test 5: Store result to memory
     LEA R2, RESULT      ; R2 = address of RESULT
-    STR R4, R2, #0      ; Store R4 (75) to memory
+    STW R4, R2, #0      ; Store R4 (75) to memory
     
     ; Final register setup for easy verification
     ADD R0, R1, #0      ; R0 = 15

@@ -104,7 +104,7 @@ void State::rdump(FILE * dumpsim_file)
   printf("\nCurrent architectural state :\n");
   printf("-------------------------------------\n");
   printf("Cycle Count : %d\n", simulator().GetCycles());
-  printf("CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter().to_num());
+  printf("PC          : 0x%04x\n", GetProgramCounter().to_num());
   printf("CCs: N = %d  Z = %d  P = %d\n", GetNBit(), GetZBit(), GetPBit());
   printf("Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
@@ -118,7 +118,7 @@ void State::rdump(FILE * dumpsim_file)
   fprintf(dumpsim_file, "\nCurrent architectural state :\n");
   fprintf(dumpsim_file, "-------------------------------------\n");
   fprintf(dumpsim_file, "Cycle Count : %d\n", simulator().GetCycles());
-  fprintf(dumpsim_file, "CpuState.GetProgramCounter()          : 0x%04x\n", GetProgramCounter().to_num());
+  fprintf(dumpsim_file, "PC          : 0x%04x\n", GetProgramCounter().to_num());
   fprintf(dumpsim_file, "CCs: N = %d  Z = %d  P = %d\n", GetNBit(), GetZBit(), GetPBit());
   fprintf(dumpsim_file, "Registers:\n");
   for (auto k = 0; k < LC3b_REGS; k++)
