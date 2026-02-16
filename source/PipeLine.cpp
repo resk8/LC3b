@@ -602,6 +602,8 @@ void PipeLine::MEM_stage()
     auto is_branch_op = micro_seq.Get_BR_OP(inst->MEM_CS);
     auto is_trap_op = micro_seq.Get_TRAP_OP(inst->MEM_CS);
     auto is_rti_op = micro_seq.Get_RTI_OP(inst->MEM_CS);
+    auto is_uncond_op = micro_seq.Get_UNCOND_OP(inst->MEM_CS);
+
     if(is_branch_op)
     {
       bits3 br_intr_nzp = inst->IR.range<11,9>();
@@ -613,6 +615,8 @@ void PipeLine::MEM_stage()
            memory_sig.mem_pc_mux = 1; //branch taken, jump to target PC
          }
     }
+    else if (is_uncond_op)
+      memory_sig.mem_pc_mux = 1; // unconditional jump — always taken
     else if (is_trap_op)
       memory_sig.mem_pc_mux = 2; //trap was triggered
     else if (is_rti_op) {
