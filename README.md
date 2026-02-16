@@ -24,7 +24,7 @@ A cycle-accurate simulator for the LC-3b (Little Computer 3b, byte-addressable) 
 - **Cache Simulation**: Models instruction and data caches with variable latency
 - **Detailed Timing Diagram**: Generates cycle-by-cycle visualization in `dumpsim.txt`
 - **Instruction Disassembly**: Human-readable instruction format in output
-- **Note**: RTI (Return from Interrupt) instruction is not yet supported in the simulator
+- **RTI Support**: Full Return from Interrupt support including privilege mode enforcement, two-cycle stack pop (saved PC + PSR), and stack pointer restoration (R6 += 4)
 
 ## The 5-Stage Pipeline
 
@@ -196,9 +196,7 @@ Symbol table:
 | **Control Flow**  | BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp     |
 | **Subroutines**   | JSR, JSRR, JMP, RET                             |
 | **Shifts**        | LSHF, RSHFL, RSHFA                              |
-| **System**        | TRAP, HALT                                      |
-
-**Note**: The assembler supports RTI syntax, but the RTI instruction is not yet implemented in the simulator.
+| **System**        | TRAP, HALT, RTI                                 |
 
 ### Assembler Error Checking
 
@@ -305,36 +303,45 @@ PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   
 
 ```
 LC3b/
-├── include/              # Header files
-│   ├── BitField.h       # Template for arbitrary-width bit fields
-│   ├── Disassembler.h   # Instruction disassembly
-│   ├── instruction.h    # Instruction class definition
-│   ├── Latch.h          # Pipeline latch structures
-│   ├── LC3b.h           # ISA definitions and constants
-│   ├── MainMemory.h     # Memory and cache simulation
-│   ├── MicroSequencer.h # Control store management
-│   ├── PipeLine.h       # Pipeline control logic
-│   ├── Simulator.h      # Main simulator class
-│   └── State.h          # Architectural state (registers, CCs)
-├── source/               # Implementation files
-│   ├── Disassembler.cpp
-│   ├── instruction.cpp
-│   ├── Latch.cpp
-│   ├── LC3b.cpp         # Main entry point
-│   ├── MainMemory.cpp
-│   ├── MicroSequencer.cpp
-│   ├── PipeLine.cpp     # Core pipeline simulation
-│   ├── Simulator.cpp
-│   └── State.cpp
+├── include/                    # Header files
+│   ├── BitField.h             # Template for arbitrary-width bit fields
+│   ├── Disassembler.h         # Instruction disassembly
+│   ├── instruction.h          # Instruction class (pipeline data + RTI state machine)
+│   ├── Latch.h                # Pipeline latch structures
+│   ├── LC3b.h                 # ISA definitions, CS_BITS enums, type aliases
+│   ├── MainMemory.h           # Memory and cache simulation
+│   ├── MicroSequencer.h       # Control store management
+│   ├── OperationUnit.h        # ALU / shifter unit
+│   ├── PipeLine.h             # Pipeline control logic
+│   ├── Simulator.h            # Main simulator class
+│   └── State.h                # Architectural state (registers, PSR, NZP)
+├── source/                     # Implementation files
+│   ├── Disassembler.cpp       # Instruction disassembly
+│   ├── instruction.cpp        # Instruction object factory
+│   ├── Latch.cpp              # Pipeline latch copy operator
+│   ├── LC3b.cpp               # Main entry point
+│   ├── MainMemory.cpp         # Memory load, icache/dcache access
+│   ├── MicroSequencer.cpp     # Control store initialization and access
+│   ├── OperationUnit.cpp      # ALU / shifter implementation
+│   ├── PipeLine.cpp           # Core pipeline simulation (all 5 stages)
+│   ├── Simulator.cpp          # Simulator shell and command loop
+│   └── State.cpp              # CPU state initialization and register file
 ├── doc/
-│   ├── Lc3b isa.pdf     # ISA specification
-│   ├── lc3b uarch.pdf   # Microarchitecture details
-│   ├── lc3b.pdf         # Overview
-│   ├── LC3-Pipelining.pdf # Pipeline design
+│   ├── EE 460N lab 6 Spring 2015.pdf  # Lab specification
+│   ├── LC3-Pipelining.pdf     # Pipeline design reference
+│   ├── Lc3b isa.pdf           # ISA specification
+│   ├── lc3b uarch.pdf         # Microarchitecture details
+│   ├── lc3b.pdf               # Architecture overview
 │   └── test/
-│       ├── ucode        # Microcode control store ROM
-│       └── dumpsim.txt  # Generated timing diagram output
-└── build/                # CMake build directory
+│       ├── ucode              # Microcode control store ROM (25-bit control words)
+│       ├── lc3b_assembler.py  # Two-pass LC-3b assembler (asm → obj)
+│       ├── example.asm/.obj   # Example program (arithmetic + loop)
+│       ├── rti_test.asm/.obj  # RTI instruction test (supervisor mode)
+│       ├── test_program.asm/.obj
+│       ├── simple_example.asm/.obj
+│       └── dumpsim.txt        # Generated timing diagram output
+├── CMakeLists.txt
+└── build/                      # CMake build output (binary at build/source/lC3b)
 ```
 
 ## Understanding the Microcode
@@ -358,6 +365,7 @@ The simulator uses a microcode ROM ([`doc/test/ucode`](doc/test/ucode)) to contr
 | `BR.OP`              | 1     | Branch operation enable                        |
 | `UNCOND`             | 0     | Unconditional branch                           |
 | `TRAP`               | 0     | Trap instruction                               |
+| `RTI`                | 0     | RTI instruction                                |
 | `BR.STALL`           | 0     | Branch stall signal                            |
 | `DCACHE.EN`          | 0     | Data cache enable (no memory access)           |
 | `DCACHE.RW`          | 0     | Data cache read/write                          |
@@ -365,6 +373,7 @@ The simulator uses a microcode ROM ([`doc/test/ucode`](doc/test/ucode)) to contr
 | `DR.VALUEMUX[1:0]`   | 00    | Destination register value source              |
 | `LD.REG`             | 1     | **Load register file** (writeback enabled)     |
 | `LD.CC`              | 1     | **Load condition codes** (update N, Z, P)      |
+| `LD.PSR`             | 0     | **Load Processor State** (PSR)                 |
 
 **Key Control Signals for ADD:**
 - **Register Dependencies**: Both `SR1.NEEDED` and `SR2.NEEDED` are set, indicating this instruction requires two source registers
@@ -384,10 +393,11 @@ The simulator uses a microcode ROM ([`doc/test/ucode`](doc/test/ucode)) to contr
 ## Contributing
 
 Contributions are welcome! Areas for improvement:
-- Additional ISA instruction support
 - More sophisticated branch prediction
-- Cache hierarchy modeling
-- Performance metrics collection
+- Cache hierarchy modeling (multi-level cache, eviction policies)
+- Performance metrics collection (IPC, stall cycle breakdown)
+- LDI / STI reserved instruction support
+- OoO engine
 
 ## License
 
