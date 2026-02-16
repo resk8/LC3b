@@ -83,9 +83,9 @@ class State
   void init_state();
   void SetProgramCounter(const bits16 & val) { PC = val; }
   bits16 GetProgramCounter() const {return PC; }
-  bool GetNBit() const { return N; };
-  bool GetPBit() const { return P; };
-  bool GetZBit() const { return Z; };
+  bool GetNBit() const { return PSR[2]; };
+  bool GetZBit() const { return PSR[1]; };
+  bool GetPBit() const { return PSR[0]; };
   bits3 GetNZP();
   void SetDataForRegister(const bits3 & reg, const bits16 & data);
   bits16 GetRegisterData(const bits3 & reg) const;
@@ -97,6 +97,14 @@ class State
   MEMORY_stage_Entry & MemSignals() {return memory_sigs; }
   STORE_stage_Entry & SrSignals() {return store_sigs; }
 
+  // PSR (Processor Status Register) methods
+  void SetPSR(const bits16 & val) { PSR = val; }
+  bits16 GetPSR() const { return PSR; }
+  bool IsPrivilegeMode() const { return PSR[15]; }  // 0=supervisor, 1=user
+  void SetPrivilegeMode(bool user_mode) { PSR[15] = user_mode; }
+  void TriggerPrivilegeException() { privilege_exception = true; }
+  bool HasPrivilegeException() const { return privilege_exception; }
+  void ClearPrivilegeException() { privilege_exception = false; }
 
   private:
   Simulator & _simulator;
@@ -108,10 +116,9 @@ class State
   /***************************************************************/
   /* architectural state                                         */
   /***************************************************************/
-  bits16 PC; /* program counter */
-  bool N,	   /* n condition bit */
-       Z,    /* z condition bit */
-       P;	   /* p condition bit */
+  bits16 PC;  /* program counter */
+  bits16 PSR; /* processor status register */
+  bool privilege_exception; /* privilege mode violation flag */
 
   DE_Stage_Entry decode_sigs;
   AGEX_Stage_Entry agex_sigs;

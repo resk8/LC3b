@@ -2,6 +2,7 @@
 /* PipeLine Implementaion                                      */
 /***************************************************************/
 
+#include "instruction.h"
 #include <cstring>
 #include <assert.h>
 #ifdef __linux__
@@ -12,7 +13,6 @@
     #include "../include/Latch.h"
     #include "../include/OperationUnit.h"
     #include "../include/PipeLine.h"
-    //#include "../include/instruction.h"
     #include "../include/Disassembler.h"
 #else
     #include "Simulator.h"
@@ -22,7 +22,6 @@
     #include "Latch.h"
     #include "OperationUnit.h"
     #include "PipeLine.h"
-    //#include "instruction.h"
     #include "Disassembler.h"
 #endif
 
@@ -247,11 +246,18 @@ void PipeLine::ProcessRegisterFile(const bits16 & de_instruction)
   auto & cpu_state = simulator().state();
   auto & decode_sigs = cpu_state.DecodeSignals();
   auto & store_signals = cpu_state.SrSignals();
-
+  
   // select the sr2 register based on the type
   // of access: register or immediate
   // SR2.IDMUX = de_instruction[13]
-  decode_sigs.de_sr1 = de_instruction.range<8,6>();
+  auto is_rti_op = de_instruction.range<15,12>().to_num() == 0x8;
+  if (is_rti_op) {// RTI opcode
+    decode_sigs.de_sr1 = 6; // R6 is the stack pointer
+  }
+  else {
+    decode_sigs.de_sr1 = de_instruction.range<8,6>();
+  }
+  
   if(de_instruction[13])
     decode_sigs.de_sr2 = de_instruction.range<11,9>();
   else
@@ -492,8 +498,23 @@ void PipeLine::SR_stage()
     sr_sig.v_sr_ld_reg = micro_sequencer.Get_SR_LD_REG(inst->SR_CS) & store_latch.V;
     sr_sig.v_sr_ld_cc = micro_sequencer.Get_SR_LD_CC(inst->SR_CS) & store_latch.V;
 
+    if(micro_sequencer.Get_SR_LD_PSR(inst->SR_CS) && store_latch.V) {
+      if (inst->rti_state == Instruction::RTI_COMPLETE) {
+        // Only restore the privilege bit from the saved PSR.
+        // NZP bits (PSR[2:0]) are managed by GetNZP() in the decode stage.
+        simulator().state().SetPrivilegeMode(inst->rti_saved_psr[15]);
+        // Route R6 += 4 through the normal register writeback path
+        // so hazard detection sees the pending write
+        bits3 r6_id = 6;
+        sr_sig.sr_drid = r6_id;
+        sr_sig.sr_reg_data = simulator().state().GetRegisterData(r6_id) + 4;
+        sr_sig.v_sr_ld_reg = true;
+      }
+      // else: RTI privilege exception path — do nothing to PSR
+    }
+    
     /* CC LOGIC  */
-    sr_sig.sr_n = sr_sig.sr_reg_data[15];
+    sr_sig.sr_n = sr_sig.sr_reg_data[15]; // two's complement negative if the most significant bit is 1
     sr_sig.sr_z = ((sr_sig.sr_reg_data.to_num() == 0) ? 1 : 0);
     sr_sig.sr_p = ((!sr_sig.sr_n) && (!sr_sig.sr_z));
   }
@@ -540,7 +561,7 @@ void PipeLine::MEM_stage()
     MDR_IN = inst->ALU_RESULT;
 
   //read/write enable logic
-  auto read_write_en = micro_seq.Get_DCACHE_RW(memory_latch.MEM_CS);
+  auto read_write_en = micro_seq.Get_DCACHE_RW(inst->MEM_CS);
   auto we_high = 0, we_low = 0;
   if(read_write_en)
   {
@@ -580,6 +601,7 @@ void PipeLine::MEM_stage()
   {
     auto is_branch_op = micro_seq.Get_BR_OP(inst->MEM_CS);
     auto is_trap_op = micro_seq.Get_TRAP_OP(inst->MEM_CS);
+    auto is_rti_op = micro_seq.Get_RTI_OP(inst->MEM_CS);
     if(is_branch_op)
     {
       bits3 br_intr_nzp = inst->IR.range<11,9>();
@@ -593,6 +615,40 @@ void PipeLine::MEM_stage()
     }
     else if (is_trap_op)
       memory_sig.mem_pc_mux = 2; //trap was triggered
+    else if (is_rti_op) {
+      switch (inst->rti_state) {
+        case Instruction::RTI_IDLE:
+          if(simulator().state().IsPrivilegeMode()) {
+            simulator().state().TriggerPrivilegeException();
+            memory_sig.mem_pc_mux = 0;
+            break;
+          }
+          if (data_cache_r) {
+            inst->rti_saved_pc = MDR_OUT;
+            inst->ADDRESS = inst->ADDRESS + 2; // aim at [R6+2]
+            inst->rti_state = Instruction::RTI_READ_PSR;
+            stall_sig.mem_stall = true; // stall until RTI completes
+          }
+          memory_sig.mem_pc_mux = 0;
+          break;
+        case Instruction::RTI_READ_PSR:
+          if(data_cache_r) { // [R6+2] returned
+            inst->rti_saved_psr = MDR_OUT;
+            inst->rti_state = Instruction::RTI_COMPLETE;
+            memory_sig.target_pc = inst->rti_saved_pc; // set target PC to saved PC
+            memory_sig.mem_pc_mux = 1; // restore PC → triggers IsBranchTaken(), releases FETCH stall
+          }
+          else {
+            stall_sig.mem_stall = true; // keep stalling until we get the PSR value
+            memory_sig.mem_pc_mux = 0;
+          }
+          break;
+        default:
+          // TODO: should not happen, maybe add an exception?
+          memory_sig.mem_pc_mux = 0;
+          break;
+      }
+    }
     else
       memory_sig.mem_pc_mux = 0; //branch not taken, continue next instruction
   }
@@ -627,7 +683,7 @@ void PipeLine::MEM_stage()
   //load SR latch - only control signals
   /* The code below propagates the control signals from memory_sigs.CS latch
      to store_signals.CS latch. */
-  inst->SR_CS = inst->MEM_CS.range<10,7>();
+  inst->SR_CS = inst->MEM_CS.range<12,8>();
   
   // Propagate instruction object and update its data fields
   bool store_valid = memory_v && (!stall_sig.mem_stall);
@@ -770,7 +826,7 @@ void PipeLine::AGEX_stage()
   if (LD_MEM)
   {
     /* Propagate control signals from agex_sigs.CS latch to memory_sigs.CS latch. */
-    inst->MEM_CS.range<10,0>() = inst->AGEX_CS.range<19,9>();
+    inst->MEM_CS.range<12,0>() = inst->AGEX_CS.range<21,9>();
     
     // Propagate instruction object and V bit
     memory_latch.instruction = inst;
@@ -847,7 +903,7 @@ void PipeLine::DE_stage()
   if (LD_AGEX)
   {
     // Propagate control signals to instruction
-    inst->AGEX_CS.range<19,0>() = de_sig.de_ucode.range<22,3>();
+    inst->AGEX_CS.range<21,0>() = de_sig.de_ucode.range<24,3>();
 
     /*agex_sigs Valid: valid if no stall or bubbles were detected*/
     bool agex_valid = (!stall.dep_stall) && (decode_latch.V);

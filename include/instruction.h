@@ -53,17 +53,29 @@ class Instruction
   sr_cs_bits SR_CS;
 
   // Pipeline stage tracking for timing diagram
-  int fetch_cycle;                        // Cycle when instruction was fetched
+  int fetch_cycle;                          // Cycle when instruction was fetched
   std::map<int, std::string> cycle_history; // Map of cycle -> stage symbol
-  uint16_t mem_addr;                      // Memory address (for load/store)
-  bool mem_addr_valid;                    // Whether this instruction accesses memory
-  std::string current_stage;              // Current pipeline stage ("F", "D", "E", "M", "S")
+  uint16_t mem_addr;                        // Memory address (for load/store)
+  bool mem_addr_valid;                      // Whether this instruction accesses memory
+  std::string current_stage;                // Current pipeline stage ("F", "D", "E", "M", "S")
   
   // Stage tracking methods
   void recordStage(int cycle, const std::string& stage);
   void recordStall(int cycle, const std::string& stage);
   void setCurrentStage(const std::string& stage) { current_stage = stage; }
   std::string getCurrentStage() const { return current_stage; }
+
+  // RTI multi-cycle state machine
+  enum RTI_State {
+    RTI_IDLE,          // Not an RTI instruction
+    RTI_CHECK_PRIV,    // Check privilege mode
+    RTI_READ_PC,       // Read PC from stack (first memory access)
+    RTI_READ_PSR,      // Read PSR from stack (second memory access)
+    RTI_COMPLETE       // RTI complete
+  };
+  RTI_State rti_state = RTI_IDLE;
+  bits16 rti_saved_pc;   // Temporary storage for PC read from stack
+  bits16 rti_saved_psr;  // Temporary storage for PSR read from stack
 
   private:
   Instruction(Simulator & instance, const bits16 & instruction_bits);

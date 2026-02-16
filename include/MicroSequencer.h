@@ -47,16 +47,19 @@ class MicroSequencer
   bool Get_BR_OP(const mem_cs_bits & x) const          { return (x[MEM_BR_OP]); }
   bool Get_UNCOND_OP(const mem_cs_bits & x) const      { return (x[MEM_UNCOND_OP]); }
   bool Get_TRAP_OP(const mem_cs_bits & x) const        { return (x[MEM_TRAP_OP]); }
+  bool Get_RTI_OP(const mem_cs_bits & x) const         { return (x[MEM_RTI_OP]); }
   bool Get_DCACHE_EN(const mem_cs_bits & x) const      { return (x[MEM_DCACHE_EN]); }
   bool Get_DCACHE_RW(const mem_cs_bits & x) const      { return (x[MEM_DCACHE_RW]); }
   bool Get_DATA_SIZE(const mem_cs_bits & x) const      { return (x[MEM_DATA_SIZE]); }
   bits2 Get_DR_VALUEMUX(const sr_cs_bits & x) const    { return ((x[SR_DR_VALUEMUX1] << 1 ) + x[SR_DR_VALUEMUX0]); }
   bool Get_AGEX_LD_REG(const agex_cs_bits & x) const   { return (x[AGEX_LD_REG]); }
   bool Get_AGEX_LD_CC(const agex_cs_bits & x) const    { return (x[AGEX_LD_CC]); }
+  bool Get_MEM_LD_PSR(const mem_cs_bits & x) const     { return (x[MEM_LD_PSR]); }
   bool Get_MEM_LD_REG(const mem_cs_bits & x) const     { return (x[MEM_LD_REG]); }
   bool Get_MEM_LD_CC(const mem_cs_bits & x) const      { return (x[MEM_LD_CC]); }
   bool Get_SR_LD_REG(const sr_cs_bits & x) const       { return (x[SR_LD_REG]); }
   bool Get_SR_LD_CC(const sr_cs_bits & x) const        { return (x[SR_LD_CC]); }
+  bool Get_SR_LD_PSR(const sr_cs_bits & x) const       { return (x[SR_LD_PSR]); }
   bool Get_DE_BR_STALL(const cs_bits & x) const        { return (x[BR_STALL]); }
   bool Get_AGEX_BR_STALL(const agex_cs_bits & x) const { return (x[AGEX_BR_STALL]); }
   bool Get_MEM_BR_STALL(const mem_cs_bits & x) const   { return (x[MEM_BR_STALL]); }
