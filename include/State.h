@@ -68,6 +68,7 @@ typedef struct PipeState_Hazards_Struct {
        v_agex_br_stall,
        v_mem_br_stall,
        mem_stall,
+       interrupt_stall,
        icache_r;
 } Stall_Entry;
 
@@ -105,6 +106,8 @@ class State
   void TriggerPrivilegeException() { privilege_exception = true; }
   bool HasPrivilegeException() const { return privilege_exception; }
   void ClearPrivilegeException() { privilege_exception = false; }
+  void SetPriorityLevel(bits3 level) { PSR.range<10,8>() = level.range<2,0>(); }
+  bits3 GetPriorityLevel() const { return PSR.range<10,8>(); }
 
   private:
   Simulator & _simulator;

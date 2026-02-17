@@ -7,12 +7,14 @@
     #include "../include/MainMemory.h"
     #include "../include/State.h"
     #include "../include/MicroSequencer.h"
+    #include "../include/InterruptController.h"
     #include "../include/Simulator.h"
 #else
     #include "PipeLine.h"
     #include "MainMemory.h"
     #include "State.h"
     #include "MicroSequencer.h"
+    #include "InterruptController.h"
     #include "Simulator.h"
 #endif
 
@@ -28,6 +30,7 @@ dump_file(nullptr)
   CpuMemory = std::make_shared<MainMemory>(*this);
   CpuState = std::make_shared<State>(*this);
   CpuMicroSequencer = std::make_shared<MicroSequencer>(*this);
+  CpuInterruptController = std::make_shared<InterruptController>(*this);
 }
 
 /***************************************************************/

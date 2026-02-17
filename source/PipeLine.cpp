@@ -14,6 +14,7 @@
     #include "../include/OperationUnit.h"
     #include "../include/PipeLine.h"
     #include "../include/Disassembler.h"
+    #include "../include/InterruptController.h"
 #else
     #include "Simulator.h"
     #include "State.h"
@@ -23,6 +24,7 @@
     #include "OperationUnit.h"
     #include "PipeLine.h"
     #include "Disassembler.h"
+    #include "InterruptController.h"
 #endif
 
 /*
@@ -139,6 +141,101 @@ void PipeLine::idump(FILE * dumpsim_file)
   #undef PRINT_AND_DUMP
 }
 
+/**
+ * ServiceInterrupt: Handles the current interrupt based on its state.
+ * This function updates the CPU state and the interrupt controller state
+ * as the interrupt progresses through its various stages.
+ * The stages include:
+ * 1. INT_SWAP_STACK: Save the current User Stack Pointer (USP) and load the Supervisor Stack Pointer (SSP) into R6. 
+ * 2. INT_PUSH_PC: Push the current Program Counter (PC) onto the supervisor stack.
+ * 3. INT_PUSH_PSR: Push the current Processor Status Register (PSR) onto the supervisor stack.
+ * 4. INT_VECTOR_READ: Read the Interrupt Service Routine (ISR) address from the vector table and set the PC to this address.
+ * 5. INT_JUMP: Clear the interrupt state to allow the pipeline to resume normal operation.            
+ */
+void PipeLine::ServiceInterrupt() {
+    auto & intc = simulator().interrupt_controller();
+    auto & cpu_state = simulator().state();
+    auto & mem = simulator().memory();
+
+    switch (intc.getIntState()) {
+        case INT_SWAP_STACK:
+        {
+            // Step 1: If in user mode (PSR[15]=1), save USP and load SSP into R6
+            if (cpu_state.IsPrivilegeMode() == 1 /* User mode */) {
+                intc.setSavedUSP(cpu_state.GetRegisterData(6));
+                cpu_state.SetDataForRegister(6, intc.getSSP());
+            }
+            intc.setIntState(INT_PUSH_PSR);
+            break;
+        }
+        case INT_PUSH_PSR:
+        {
+            // Step 2a: Push PSR first (so it ends up at [R6+2] after both pushes)
+            bits16 r6 = cpu_state.GetRegisterData(6).to_num() - 2;
+            bits16 dummy_read;
+            bool dcache_r;
+            mem.dcache_access(r6, dummy_read, cpu_state.GetPSR(), dcache_r, 1, 1);
+            if (dcache_r) {
+                cpu_state.SetDataForRegister(6, bits16(r6));
+                intc.setIntState(INT_PUSH_PC);
+            }
+            break;
+        }
+        case INT_PUSH_PC:
+        {
+            // Step 2b: Push PC second (so it ends up at [R6+0], top of stack)
+            bits16 r6 = cpu_state.GetRegisterData(6).to_num() - 2;
+            bits16 dummy_read;
+            bool dcache_r;
+            mem.dcache_access(r6, dummy_read, cpu_state.GetProgramCounter(), dcache_r, 1, 1);
+            if (dcache_r) {
+                cpu_state.SetDataForRegister(6, bits16(r6));
+                // Steps 3-5: Update PSR for ISR context
+                cpu_state.SetPrivilegeMode(false);             // PSR[15] = 0 (supervisor)
+                cpu_state.SetPriorityLevel(intc.getIntPriority()); // PSR[10:8] = interrupt priority
+                bits16 psr = cpu_state.GetPSR();
+                psr.range<2,0>() = 0;                                     // PSR[2:0] = 0 (clear NZP)
+                cpu_state.SetPSR(psr);
+                intc.setIntState(INT_VECTOR_READ);
+            }
+            break;
+        }
+        case INT_VECTOR_READ:
+        {
+            // Steps 6-7: MAR = x01vv, read ISR address from vector table
+            bits16 vector_addr = 0x0100 | intc.getIntVector().to_num();
+            bits16 isr_addr;
+            bits16 dummy_write = 0;
+            bool dcache_r;
+            mem.dcache_access(vector_addr, isr_addr, dummy_write, dcache_r, 0, 0);
+            if (dcache_r) {
+                // Step 8: Set PC = ISR address, release pipeline
+                cpu_state.SetProgramCounter(isr_addr);
+                cpu_state.Stall().interrupt_stall = false;
+                intc.setIntState(INT_IDLE);
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+/**
+  * PipelineHasValidInstructions: Checks if there are any valid instructions currently in the pipeline stages.
+  * This is used to determine if the pipeline can be safely interrupted without losing any in-flight instructions.
+  * It checks the valid bit (V) of the latches for the DECODE,
+  * AGEX, MEMORY, and STORE stages. If any of these stages have a valid instruction, it returns true.
+  * @return true if there are valid instructions in the pipeline, false otherwise.
+  */
+bool PipeLine::PipelineHasValidInstructions() {
+  // Check if there are any valid instructions in the pipeline stages
+  return (latch(DECODE, PS).V ||
+          latch(AGEX, PS).V ||
+          latch(MEMORY, PS).V ||
+          latch(STORE, PS).V);
+}
+
 /***************************************************************/
 /*                                                             */
 /* Procedure : Cycle                                           */
@@ -148,11 +245,29 @@ void PipeLine::idump(FILE * dumpsim_file)
 /***************************************************************/
 void PipeLine::Cycle()
 {
-  // 1. Simulate all stages to determine the state of NEW_PS
+  auto & intc = simulator().interrupt_controller();
+  auto & stall_sig = simulator().state().Stall();
+
+  // Check for a new pending interrupt — immediately stall FETCH
+  if (intc.getIntState() == INT_IDLE && intc.HasPendingInterrupt()) {
+    auto req = intc.ProcessInterrupt();
+    intc.setIntPriority(req.priority);
+    intc.setIntVector(req.vector);
+    intc.setIntState(INT_SWAP_STACK);
+    stall_sig.interrupt_stall = true;
+  }
+
+  // If interrupt acknowledged and pipeline has drained, service it
+  if (intc.getIntState() != INT_IDLE && !PipelineHasValidInstructions()) {
+    ServiceInterrupt();
+    UpdateHistory();
+    MoveLatch(PS, NEW_PS);
+    return;
+  }
+
+  // Pipeline still has in-flight instructions — keep propagating to drain
   PropagatePipeLine();
-  // 2. Record what happened in this cycle based on PS and NEW_PS
   UpdateHistory();
-  // 3. Advance the pipeline by committing the new state
   MoveLatch(PS, NEW_PS);
 }
 
@@ -230,7 +345,8 @@ bool PipeLine::IsStallDetected()
       !stall.mem_stall &&
       !stall.v_agex_br_stall &&
       !stall.v_de_br_stall &&
-      !stall.v_mem_br_stall)
+      !stall.v_mem_br_stall && 
+      !stall.interrupt_stall)
     return false;
   else if(stall.v_mem_br_stall && IsBranchTaken())
     return false;
@@ -357,6 +473,20 @@ void PipeLine::UpdateHistory()
 {
   int current_cycle = simulator().GetCycles();
   Disassembler disassembler;
+
+  // If servicing an interrupt, record "I" for this cycle in a dedicated trace row
+  auto & intc = simulator().interrupt_controller();
+  if (intc.getIntState() != INT_IDLE) {
+      // Create the interrupt trace row on first interrupt cycle
+      if (instruction_history.empty() || instruction_history.back().disassembled != "--- INT ---") {
+          InstructionTrace int_trace;
+          int_trace.pc = 0;
+          int_trace.disassembled = "--- INT ---";
+          instruction_history.push_back(int_trace);
+      }
+      instruction_history.back().cycle_history[current_cycle] = "I";
+      return;
+  }
 
   // A new instruction has been successfully fetched if it's valid in the next
   // DECODE latch, AND it's different from what was in the current DECODE latch
@@ -500,14 +630,31 @@ void PipeLine::SR_stage()
 
     if(micro_sequencer.Get_SR_LD_PSR(inst->SR_CS) && store_latch.V) {
       if (inst->rti_state == Instruction::RTI_COMPLETE) {
+        bits3 r6_id = 6;
+        
+        // This is the normal RTI return path, where we restore the user context.
+        auto & intc = simulator().interrupt_controller();
+        // Save SSP before switching back to user mode
+        if (inst->rti_saved_psr[15]) { // returning to user mode
+            intc.setSSP(simulator().state().GetRegisterData(r6_id) + 4);
+            // R6 = saved USP (restore user stack pointer)
+            sr_sig.sr_reg_data = intc.getSavedUSP();
+        } else {
+            // Staying in supervisor mode (nested interrupt return)
+            // R6 += 4 to pop PC and PSR off supervisor stack
+            sr_sig.sr_reg_data = simulator().state().GetRegisterData(r6_id) + 4;
+        }
+
         // Only restore the privilege bit from the saved PSR.
         // NZP bits (PSR[2:0]) are managed by GetNZP() in the decode stage.
         simulator().state().SetPrivilegeMode(inst->rti_saved_psr[15]);
-        // Route R6 += 4 through the normal register writeback path
+
+        // Restore the priority level from the saved PSR to ensure correct interrupt masking after return
+        simulator().state().SetPriorityLevel(inst->rti_saved_psr.range<10,8>());
+
+        // Route R6 update through the normal register writeback path
         // so hazard detection sees the pending write
-        bits3 r6_id = 6;
         sr_sig.sr_drid = r6_id;
-        sr_sig.sr_reg_data = simulator().state().GetRegisterData(r6_id) + 4;
         sr_sig.v_sr_ld_reg = true;
       }
       // else: RTI privilege exception path — do nothing to PSR

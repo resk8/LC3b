@@ -14,6 +14,7 @@ class PipeLine;
 class MainMemory;
 class State;
 class MicroSequencer;
+class InterruptController;
 
 class Simulator
 {
@@ -25,6 +26,7 @@ class Simulator
   MainMemory & memory() {return *CpuMemory; }
   State & state() {return *CpuState; }
   MicroSequencer & microsequencer() {return *CpuMicroSequencer; }
+  InterruptController & interrupt_controller() {return *CpuInterruptController; }
   
   void help();  
   void cycle();
@@ -44,6 +46,7 @@ class Simulator
   std::shared_ptr<MicroSequencer> CpuMicroSequencer;
   std::shared_ptr<PipeLine> CpuPipeline;
   std::shared_ptr<State> CpuState;
+  std::shared_ptr<InterruptController> CpuInterruptController;
 
 
   /* A cycle counter */
