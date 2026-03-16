@@ -150,7 +150,6 @@ void PipeLine::idump(FILE * dumpsim_file)
  * 2. INT_PUSH_PC: Push the current Program Counter (PC) onto the supervisor stack.
  * 3. INT_PUSH_PSR: Push the current Processor Status Register (PSR) onto the supervisor stack.
  * 4. INT_VECTOR_READ: Read the Interrupt Service Routine (ISR) address from the vector table and set the PC to this address.
- * 5. INT_JUMP: Clear the interrupt state to allow the pipeline to resume normal operation.            
  */
 void PipeLine::ServiceInterrupt() {
     auto & intc = simulator().interrupt_controller();
@@ -165,6 +164,11 @@ void PipeLine::ServiceInterrupt() {
                 intc.setSavedUSP(cpu_state.GetRegisterData(6));
                 cpu_state.SetDataForRegister(6, intc.getSSP());
             }
+            // TODO: we could elimnate the pipe drainage latency if we start the stack swap immediately and just stall the pipeline until it's done, 
+            // instead of waiting to service until the pipeline is fully drained. This would require some additional logic to handle the case 
+            // where an interrupt arrives while a previous one is still being serviced, but it could significantly reduce interrupt latency.
+            // we would also need 2 temporary registers to hold the saved PC and PSR values during the swap, since we can't guarantee that R6 
+            // won't be overwritten by an in-flight instruction while we're waiting for the pipeline to drain.
             intc.setIntState(INT_PUSH_PSR);
             break;
         }

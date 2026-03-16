@@ -24,7 +24,8 @@ A cycle-accurate simulator for the LC-3b (Little Computer 3b, byte-addressable) 
 - **Cache Simulation**: Models instruction and data caches with variable latency
 - **Detailed Timing Diagram**: Generates cycle-by-cycle visualization in `dumpsim.txt`
 - **Instruction Disassembly**: Human-readable instruction format in output
-- **RTI Support**: Full Return from Interrupt support including privilege mode enforcement, two-cycle stack pop (saved PC + PSR), and stack pointer restoration (R6 += 4)
+- **Interrupt Support**: Full interrupt handling with priority-based interrupt controller, automatic pipeline drain, supervisor/user stack pointer swap, PSR and PC push to supervisor stack, vector table lookup, and PSR update (privilege, priority, condition codes)
+- **RTI Support**: Full Return from Interrupt support including privilege mode enforcement, two-cycle stack pop (saved PC + PSR), PSR restoration (privilege and priority level), and USP/SSP swap on mode transition
 
 ## The 5-Stage Pipeline
 
@@ -241,6 +242,7 @@ PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   
 | `M`                 | Memory stage                                     |
 | `S`                 | Writeback stage                                  |
 | `D*`, `E*`, `M*`    | Stalled in that stage                            |
+| `I`                 | Interrupt being serviced (pipeline frozen)        |
 | (blank)             | Instruction not yet fetched or already retired   |
 
 ### Example: Simple Loop with Dependencies
@@ -307,6 +309,7 @@ LC3b/
 │   ├── BitField.h             # Template for arbitrary-width bit fields
 │   ├── Disassembler.h         # Instruction disassembly
 │   ├── instruction.h          # Instruction class (pipeline data + RTI state machine)
+│   ├── InterruptController.h  # Interrupt controller (priority queue, state machine)
 │   ├── Latch.h                # Pipeline latch structures
 │   ├── LC3b.h                 # ISA definitions, CS_BITS enums, type aliases
 │   ├── MainMemory.h           # Memory and cache simulation
@@ -318,6 +321,7 @@ LC3b/
 ├── source/                     # Implementation files
 │   ├── Disassembler.cpp       # Instruction disassembly
 │   ├── instruction.cpp        # Instruction object factory
+│   ├── InterruptController.cpp # Interrupt controller implementation
 │   ├── Latch.cpp              # Pipeline latch copy operator
 │   ├── LC3b.cpp               # Main entry point
 │   ├── MainMemory.cpp         # Memory load, icache/dcache access
