@@ -270,9 +270,11 @@ void PipeLine::Cycle()
   }
 
   // Service the active trap each cycle until TRAP_IDLE.
+  // UpdateHistory runs BEFORE ServiceTrap so the pre-transition state is recorded
+  // (SWAP_STACK completes in zero cycles and would otherwise never appear in the trace).
   if (cpu_state.GetTrapState() != TRAP_IDLE && !PipelineHasValidInstructions()) {
-    ServiceTrap();
     UpdateHistory();
+    ServiceTrap();
     MoveLatch(PS, NEW_PS);
     return;
   }
@@ -375,26 +377,28 @@ void PipeLine::ProcessRegisterFile(const bits16 & de_instruction)
   auto & decode_sigs = cpu_state.DecodeSignals();
   auto & store_signals = cpu_state.SrSignals();
   
-  // select the sr2 register based on the type
-  // of access: register or immediate
-  // SR2.IDMUX = de_instruction[13]
-  auto is_rti_op = de_instruction.range<15,12>().to_num() == 0x8;
-  if (is_rti_op) {// RTI opcode
-    decode_sigs.de_sr1 = 6; // R6 is the stack pointer
-  }
-  else {
-    decode_sigs.de_sr1 = de_instruction.range<8,6>();
-  }
-  
-  if(de_instruction[13])
-    decode_sigs.de_sr2 = de_instruction.range<11,9>();
-  else
-    decode_sigs.de_sr2 = de_instruction.range<2,0>();
+  if (!cpu_state.IsExceptionPending()) {
+    // select the sr2 register based on the type
+    // of access: register or immediate
+    // SR2.IDMUX = de_instruction[13]
+    auto is_rti_op = de_instruction.range<15,12>().to_num() == 0x8;
+    if (is_rti_op) {// RTI opcode
+      decode_sigs.de_sr1 = 6; // R6 is the stack pointer
+    }
+    else {
+      decode_sigs.de_sr1 = de_instruction.range<8,6>();
+    }
+    
+    if(de_instruction[13])
+      decode_sigs.de_sr2 = de_instruction.range<11,9>();
+    else
+      decode_sigs.de_sr2 = de_instruction.range<2,0>();
 
-  // get the data from the register
-  // to be used in the Decode stage
-  decode_sigs.de_sr1_data = cpu_state.GetRegisterData(decode_sigs.de_sr1);
-  decode_sigs.de_sr2_data = cpu_state.GetRegisterData(decode_sigs.de_sr2);
+    // get the data from the register
+    // to be used in the Decode stage
+    decode_sigs.de_sr1_data = cpu_state.GetRegisterData(decode_sigs.de_sr1);
+    decode_sigs.de_sr2_data = cpu_state.GetRegisterData(decode_sigs.de_sr2);
+  }
 
   // load processed data into destinaion
   // register baed on ucode bit
@@ -497,7 +501,16 @@ void PipeLine::UpdateHistory()
           trap_trace.disassembled = label;
           instruction_history.push_back(trap_trace);
       }
-      instruction_history.back().cycle_history[current_cycle] = "I";
+      auto trap_state_label = [](TRAP_State s) -> std::string {
+          switch (s) {
+              case TRAP_SWAP_STACK:   return "SS";
+              case TRAP_PUSH_PSR:     return "PP";
+              case TRAP_PUSH_PC:      return "PC";
+              case TRAP_VECTOR_READ:  return "VR";
+              default:                return "I";
+          }
+      };
+      instruction_history.back().cycle_history[current_cycle] = trap_state_label(cpu_state_h.GetTrapState());
       return;
   }
 
@@ -917,8 +930,9 @@ void PipeLine::AGEX_stage()
   }
   
   inst->current_stage = "E";
-  
+
   if(cpu_state.IsExceptionPending()) {
+    inst->current_stage = "Xe";
     memory_latch.instruction = inst;
     memory_latch.V = false; // squash the instruction causing the exception
     return;
@@ -1077,6 +1091,10 @@ void PipeLine::DE_stage()
   inst->current_stage = "D";
 
   if(cpu_state.IsExceptionPending()) {
+    // SR writeback must still commit — an instruction in STORE PS may have
+    // completed before the exception fired and its result must reach the register file.
+    ProcessRegisterFile(inst->IR);
+    inst->current_stage = "Xd";
     agex_latch.instruction = inst;
     agex_latch.V = false; // squash the instruction causing the exception
     return;

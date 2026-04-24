@@ -235,17 +235,21 @@ PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   
 
 ### Stage Indicators
 
-| Symbol           | Meaning                                                                                              |
-|------------------|------------------------------------------------------------------------------------------------------|
-| `F`              | Fetch stage                                                                                          |
-| `D`              | Decode stage                                                                                         |
-| `E`              | Execute stage                                                                                        |
-| `M`              | Memory stage                                                                                         |
-| `S`              | Writeback stage                                                                                      |
-| `D*`, `E*`, `M*` | Stalled in that stage                                                                                |
-| `I` (`--- INT ---`) | Interrupt being serviced (pipeline frozen)                                                        |
-| `I` (`--- EXC ---`) | Exception being serviced (pipeline frozen)                                                        |
-| (blank)          | Instruction not yet fetched or already retired                                                       |
+| Symbol              | Meaning                                                                                           |
+|---------------------|---------------------------------------------------------------------------------------------------|
+| `F`                 | Fetch stage                                                                                       |
+| `D`                 | Decode stage                                                                                      |
+| `E`                 | Execute stage                                                                                     |
+| `M`                 | Memory stage                                                                                      |
+| `S`                 | Writeback stage                                                                                   |
+| `D*`, `E*`, `M*`    | Stalled in that stage (data hazard or cache miss)                                                 |
+| `Xd`                | Instruction in Decode was squashed due to a pending exception                                     |
+| `Xe`                | Instruction in Execute was squashed due to a pending exception                                    |
+| `SS` (`--- INT ---` / `--- EXC ---`) | Trap service: swap USP↔SSP (if in user mode)                                |
+| `PP` (`--- INT ---` / `--- EXC ---`) | Trap service: push PSR onto supervisor stack                                |
+| `PC` (`--- INT ---` / `--- EXC ---`) | Trap service: push PC onto supervisor stack, update PSR                     |
+| `VR` (`--- INT ---` / `--- EXC ---`) | Trap service: read handler address from vector table, set PC               |
+| (blank)             | Instruction not yet fetched or already retired                                                    |
 
 ### Example: Simple Loop with Dependencies
 
@@ -303,6 +307,23 @@ PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   
 - **Pipeline Efficiency**: Total cycles = 12, vs. 6 instructions × 5 stages = 30 cycles (if fully serialized)
 - **Stall Propagation**: Each dependency causes a "bubble" that propagates through the pipeline
 
+### Example: Exception Handling
+
+The following output is from `exc_unaligned.obj`, which performs a word load from an odd address:
+
+```
+PC      | Instruction     | Mem Addr | C8   | C9   | C10  | C11  | C12  | C13  | C14  | C15  | C16  |
+--------+-----------------+----------+------+------+------+------+------+------+------+------+------|
+0x3006  | LDW R1, R0, #0  | 0x300d   |  ...    E    | M    |      |      |      |      |      |      |
+0x3008  | ADD R2, R2, #1  |          |         D    | Xe   |      |      |      |      |      |      |
+0x300a  | HALT            |          |         F    | Xd   |      |      |      |      |      |      |
+0x0000  | --- EXC ---     |          |              |      | SS   | PP   | PC   | VR   |      |      |
+```
+
+- **`Xe`**: `ADD R2` was in Execute when the exception fired in MEM — squashed
+- **`Xd`**: `HALT` was in Decode when the exception fired — squashed
+- **`SS`–`VR`**: Four-cycle service sequence: swap stack pointers, push PSR, push faulting PC, load handler address from vector table
+
 ## Project Structure
 
 ```
@@ -341,11 +362,14 @@ LC3b/
 │   └── test/
 │       ├── ucode              # Microcode control store ROM (25-bit control words)
 │       ├── lc3b_assembler.py  # Two-pass LC-3b assembler (asm → obj)
-│       ├── example.asm/.obj   # Example program (arithmetic + loop)
-│       ├── rti_test.asm/.obj  # RTI instruction test (supervisor mode)
+│       ├── example.asm/.obj        # Example program (arithmetic + loop)
+│       ├── rti_test.asm/.obj       # RTI instruction test (supervisor mode)
+│       ├── exc_illegal.asm/.obj    # Exception test: illegal instruction (reserved opcode)
+│       ├── exc_privilege.asm/.obj  # Exception test: RTI from user mode (privilege violation)
+│       ├── exc_unaligned.asm/.obj  # Exception test: LDW from odd address (unaligned access)
 │       ├── test_program.asm/.obj
 │       ├── simple_example.asm/.obj
-│       └── dumpsim.txt        # Generated timing diagram output
+│       └── dumpsim.txt             # Generated timing diagram output
 ├── CMakeLists.txt
 └── build/                      # CMake build output (binary at build/source/lC3b)
 ```
