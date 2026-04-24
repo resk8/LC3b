@@ -19,7 +19,6 @@
 */
 InterruptController::InterruptController(Simulator & instance) : _simulator(instance) 
 {
-    setIntState(INT_IDLE);
     setSavedUSP(0);
     setSSP(0x3000); // Initialize SSP to top of supervisor stack
 }
@@ -49,7 +48,7 @@ void
 InterruptController::RaiseInterrupt(bits3 priority, bits8 vector)
 {
     InterruptRequest req;
-    req.vector = vector;
+    req.vector = 0x0100 + (vector.to_num() << 1); // Calculate vector address (x02vv)
     req.priority = priority;
     pending.push(req);
 }

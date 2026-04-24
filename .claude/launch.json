@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "LC-3b Simulator (RTI test)",
+      "runtimeExecutable": "./build/source/lC3b",
+      "runtimeArgs": ["doc/test/ucode", "doc/test/rti_test.obj"],
+      "port": 0
+    },
+    {
+      "name": "LC-3b Simulator (JMP/JSR test)",
+      "runtimeExecutable": "./build/source/lC3b",
+      "runtimeArgs": ["doc/test/ucode", "doc/test/jmp_jsr_test.obj"],
+      "port": 0
+    },
+    {
+      "name": "LC-3b Simulator (example)",
+      "runtimeExecutable": "./build/source/lC3b",
+      "runtimeArgs": ["doc/test/ucode", "doc/test/example.obj"],
+      "port": 0
+    },
+    {
+      "name": "LC-3b Assembler",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["doc/test/lc3b_assembler.py"],
+      "port": 0
+    },
+    {
+      "name": "CMake Build",
+      "runtimeExecutable": "cmake",
+      "runtimeArgs": ["--build", "build"],
+      "port": 0
+    }
+  ]
+}

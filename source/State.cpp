@@ -21,6 +21,11 @@
 /***************************************************************/
 void State::init_state()
 {
+  ClearExceptionPending();
+  ClearPrivilegeException();
+  SetTrapState(TRAP_IDLE);
+  trap_ctx = TrapContext{};
+
   SetProgramCounter(0);
   SetPSR(0x8002); // Set the initial value of PSR with the default condition codes (Z=1)
   REGS.resize(LC3b_REGS);

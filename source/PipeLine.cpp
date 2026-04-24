@@ -142,81 +142,76 @@ void PipeLine::idump(FILE * dumpsim_file)
 }
 
 /**
- * ServiceInterrupt: Handles the current interrupt based on its state.
- * This function updates the CPU state and the interrupt controller state
- * as the interrupt progresses through its various stages.
- * The stages include:
- * 1. INT_SWAP_STACK: Save the current User Stack Pointer (USP) and load the Supervisor Stack Pointer (SSP) into R6. 
- * 2. INT_PUSH_PC: Push the current Program Counter (PC) onto the supervisor stack.
- * 3. INT_PUSH_PSR: Push the current Processor Status Register (PSR) onto the supervisor stack.
- * 4. INT_VECTOR_READ: Read the Interrupt Service Routine (ISR) address from the vector table and set the PC to this address.
+ * ServiceTrap: Unified state machine for both interrupts and exceptions.
+ *
+ * All branching on cause (interrupt vs. exception) is resolved at initiation
+ * time and captured in TrapContext. The state machine itself is cause-agnostic,
+ * with one exception: TRAP_PUSH_PC conditionally updates PSR[10:8] only for
+ * interrupts (ctx.update_priority == true).
+ *
+ * States:
+ * 1. TRAP_SWAP_STACK : Save USP, load SSP into R6 (if currently in user mode)
+ * 2. TRAP_PUSH_PSR   : Push original PSR onto supervisor stack
+ * 3. TRAP_PUSH_PC    : Push ctx.pc_to_push onto supervisor stack, update PSR
+ * 4. TRAP_VECTOR_READ: Read handler address from ctx.vector_addr, set PC
  */
-void PipeLine::ServiceInterrupt() {
-    auto & intc = simulator().interrupt_controller();
+void PipeLine::ServiceTrap() {
     auto & cpu_state = simulator().state();
+    auto & intc = simulator().interrupt_controller();
     auto & mem = simulator().memory();
+    auto & ctx = cpu_state.GetTrapContext();
 
-    switch (intc.getIntState()) {
-        case INT_SWAP_STACK:
+    switch (cpu_state.GetTrapState()) {
+        case TRAP_SWAP_STACK:
         {
-            // Step 1: If in user mode (PSR[15]=1), save USP and load SSP into R6
-            if (cpu_state.IsPrivilegeMode() == 1 /* User mode */) {
+            if (cpu_state.IsPrivilegeMode() /* PSR[15]=1 = user mode */) {
                 intc.setSavedUSP(cpu_state.GetRegisterData(6));
                 cpu_state.SetDataForRegister(6, intc.getSSP());
             }
-            // TODO: we could elimnate the pipe drainage latency if we start the stack swap immediately and just stall the pipeline until it's done, 
-            // instead of waiting to service until the pipeline is fully drained. This would require some additional logic to handle the case 
-            // where an interrupt arrives while a previous one is still being serviced, but it could significantly reduce interrupt latency.
-            // we would also need 2 temporary registers to hold the saved PC and PSR values during the swap, since we can't guarantee that R6 
-            // won't be overwritten by an in-flight instruction while we're waiting for the pipeline to drain.
-            intc.setIntState(INT_PUSH_PSR);
+            cpu_state.SetTrapState(TRAP_PUSH_PSR);
             break;
         }
-        case INT_PUSH_PSR:
+        case TRAP_PUSH_PSR:
         {
-            // Step 2a: Push PSR first (so it ends up at [R6+2] after both pushes)
             bits16 r6 = cpu_state.GetRegisterData(6).to_num() - 2;
             bits16 dummy_read;
             bool dcache_r;
             mem.dcache_access(r6, dummy_read, cpu_state.GetPSR(), dcache_r, 1, 1);
             if (dcache_r) {
                 cpu_state.SetDataForRegister(6, bits16(r6));
-                intc.setIntState(INT_PUSH_PC);
+                cpu_state.SetTrapState(TRAP_PUSH_PC);
             }
             break;
         }
-        case INT_PUSH_PC:
+        case TRAP_PUSH_PC:
         {
-            // Step 2b: Push PC second (so it ends up at [R6+0], top of stack)
             bits16 r6 = cpu_state.GetRegisterData(6).to_num() - 2;
             bits16 dummy_read;
             bool dcache_r;
-            mem.dcache_access(r6, dummy_read, cpu_state.GetProgramCounter(), dcache_r, 1, 1);
+            mem.dcache_access(r6, dummy_read, ctx.pc_to_push, dcache_r, 1, 1);
             if (dcache_r) {
                 cpu_state.SetDataForRegister(6, bits16(r6));
-                // Steps 3-5: Update PSR for ISR context
-                cpu_state.SetPrivilegeMode(false);             // PSR[15] = 0 (supervisor)
-                cpu_state.SetPriorityLevel(intc.getIntPriority()); // PSR[10:8] = interrupt priority
+                cpu_state.SetPrivilegeMode(false); // PSR[15] = 0 (supervisor)
+                if (ctx.update_priority)
+                    cpu_state.SetPriorityLevel(ctx.new_priority); // interrupts only
                 bits16 psr = cpu_state.GetPSR();
-                psr.range<2,0>() = 0;                                     // PSR[2:0] = 0 (clear NZP)
+                psr.range<2,0>() = 0; // PSR[2:0] = 0 (clear NZP)
                 cpu_state.SetPSR(psr);
-                intc.setIntState(INT_VECTOR_READ);
+                cpu_state.SetTrapState(TRAP_VECTOR_READ);
             }
             break;
         }
-        case INT_VECTOR_READ:
+        case TRAP_VECTOR_READ:
         {
-            // Steps 6-7: MAR = x01vv, read ISR address from vector table
-            bits16 vector_addr = 0x0100 | intc.getIntVector().to_num();
-            bits16 isr_addr;
+            bits16 handler_addr;
             bits16 dummy_write = 0;
             bool dcache_r;
-            mem.dcache_access(vector_addr, isr_addr, dummy_write, dcache_r, 0, 0);
+            mem.dcache_access(ctx.vector_addr, handler_addr, dummy_write, dcache_r, 0, 0);
             if (dcache_r) {
-                // Step 8: Set PC = ISR address, release pipeline
-                cpu_state.SetProgramCounter(isr_addr);
+                cpu_state.SetProgramCounter(handler_addr);
                 cpu_state.Stall().interrupt_stall = false;
-                intc.setIntState(INT_IDLE);
+                ctx.cause = TRAP_NONE;
+                cpu_state.SetTrapState(TRAP_IDLE);
             }
             break;
         }
@@ -249,21 +244,34 @@ bool PipeLine::PipelineHasValidInstructions() {
 /***************************************************************/
 void PipeLine::Cycle()
 {
+  auto & cpu_state = simulator().state();
   auto & intc = simulator().interrupt_controller();
   auto & stall_sig = simulator().state().Stall();
 
-  // Check for a new pending interrupt — immediately stall FETCH
-  if (intc.getIntState() == INT_IDLE && intc.HasPendingInterrupt()) {
+  // Detect new interrupt — fill TrapContext and begin draining.
+  // Skipped if an exception is already pending (exception takes priority).
+  if (cpu_state.GetTrapState() == TRAP_IDLE && !cpu_state.IsExceptionPending() && intc.HasPendingInterrupt()) {
     auto req = intc.ProcessInterrupt();
-    intc.setIntPriority(req.priority);
-    intc.setIntVector(req.vector);
-    intc.setIntState(INT_SWAP_STACK);
+    auto & ctx = cpu_state.GetTrapContext();
+    ctx.cause           = TRAP_INTERRUPT;
+    ctx.pc_to_push      = cpu_state.GetProgramCounter();
+    ctx.vector_addr     = bits16(0x0200 + (req.vector.to_num() << 1));
+    ctx.update_priority = true;
+    ctx.new_priority    = req.priority;
+    cpu_state.SetTrapState(TRAP_SWAP_STACK);
     stall_sig.interrupt_stall = true;
   }
 
-  // If interrupt acknowledged and pipeline has drained, service it
-  if (intc.getIntState() != INT_IDLE && !PipelineHasValidInstructions()) {
-    ServiceInterrupt();
+  // Transition a pending exception to active once the pipeline has drained.
+  // TrapContext was already filled in MEM_stage when the exception was detected.
+  if (cpu_state.IsExceptionPending() && !PipelineHasValidInstructions()) {
+    cpu_state.ClearExceptionPending();
+    cpu_state.SetTrapState(TRAP_SWAP_STACK);
+  }
+
+  // Service the active trap each cycle until TRAP_IDLE.
+  if (cpu_state.GetTrapState() != TRAP_IDLE && !PipelineHasValidInstructions()) {
+    ServiceTrap();
     UpdateHistory();
     MoveLatch(PS, NEW_PS);
     return;
@@ -478,15 +486,16 @@ void PipeLine::UpdateHistory()
   int current_cycle = simulator().GetCycles();
   Disassembler disassembler;
 
-  // If servicing an interrupt, record "I" for this cycle in a dedicated trace row
-  auto & intc = simulator().interrupt_controller();
-  if (intc.getIntState() != INT_IDLE) {
-      // Create the interrupt trace row on first interrupt cycle
-      if (instruction_history.empty() || instruction_history.back().disassembled != "--- INT ---") {
-          InstructionTrace int_trace;
-          int_trace.pc = 0;
-          int_trace.disassembled = "--- INT ---";
-          instruction_history.push_back(int_trace);
+  // If servicing a trap (interrupt or exception), record "I" for this cycle
+  auto & cpu_state_h = simulator().state();
+  if (cpu_state_h.GetTrapState() != TRAP_IDLE) {
+      auto cause = cpu_state_h.GetTrapContext().cause;
+      std::string label = (cause == TRAP_INTERRUPT) ? "--- INT ---" : "--- EXC ---";
+      if (instruction_history.empty() || instruction_history.back().disassembled != label) {
+          InstructionTrace trap_trace;
+          trap_trace.pc = 0;
+          trap_trace.disassembled = label;
+          instruction_history.push_back(trap_trace);
       }
       instruction_history.back().cycle_history[current_cycle] = "I";
       return;
@@ -675,6 +684,7 @@ void PipeLine::SR_stage()
 void PipeLine::MEM_stage()
 {
   SetStage(MEMORY);
+  auto & cpu_state = simulator().state();
   auto & store_latch = latch(STORE,NEW_PS);
   auto & memory_latch = latch(MEMORY,PS);
   auto inst = memory_latch.instruction;
@@ -689,10 +699,11 @@ void PipeLine::MEM_stage()
   }
   
   inst->current_stage = "M";
-  
-  //access aligment logic
+
+  //access aligment logic — computed here, detection moved inside if(memory_v)
   auto alignment_needed = inst->ADDRESS[0];
   auto data_size = micro_seq.Get_DATA_SIZE(inst->MEM_CS);
+
   bits16 MDR_IN;
   if(!data_size) //byte access
   {
@@ -731,11 +742,36 @@ void PipeLine::MEM_stage()
     }
   }
 
-  //data cache access
+  // Pre-exception checks — must run BEFORE cache_en is computed so that stores
+  // to protected or unaligned addresses never reach the data cache.
+  auto memory_v = memory_latch.V;
+  auto dcache_would_en = micro_seq.Get_DCACHE_EN(inst->MEM_CS) && memory_v;
+  auto is_trap_op_pre = micro_seq.Get_TRAP_OP(inst->MEM_CS); // needed before branch/RTI block
+  if (memory_v && inst->exception_pending == ExceptionType::NONE) {
+    auto address_val = inst->ADDRESS.to_num();
+
+    // RTI privilege violation — checked here (before cache_en) so the spurious
+    // cache read of [R6]/USP is suppressed. RTI has DCACHE_EN=1, so without this
+    // early check the read fires before the violation is detected.
+    if (micro_seq.Get_RTI_OP(inst->MEM_CS) && cpu_state.IsPrivilegeMode() /* user mode */)
+      inst->exception_pending = ExceptionType::PRIVILEGE_MODE_VIOLATION;
+
+    // ACV: user mode access to supervisor space (0x0000-0x2FFF) or device registers (0xFE00-0xFFFF)
+    // TRAP is exempt: the vector table lookup is done by hardware, not by user code.
+    if (dcache_would_en && !is_trap_op_pre && cpu_state.IsPrivilegeMode() /* PSR[15]=1 = user mode */) {
+      if (address_val <= 0x2FFF || address_val >= 0xFE00)
+        inst->exception_pending = ExceptionType::ACV_OR_UNALIGNED;
+    }
+
+    // Unaligned word access — only for instructions that actually hit the data cache
+    if (dcache_would_en && alignment_needed && data_size)
+      inst->exception_pending = ExceptionType::ACV_OR_UNALIGNED;
+  }
+
+  //data cache access — suppressed if any exception is pending to prevent corrupt writes
   bits16 MDR_OUT;
   bool data_cache_r = false;
-  auto & memory_latch_ps = latch(MEMORY, PS);
-  auto cache_en = micro_seq.Get_DCACHE_EN(inst->MEM_CS) && memory_latch_ps.V;
+  auto cache_en = dcache_would_en && (inst->exception_pending == ExceptionType::NONE);
   if(cache_en)
     main_memory.dcache_access(inst->ADDRESS, MDR_OUT, MDR_IN, data_cache_r, we_low, we_high);
   else
@@ -746,10 +782,10 @@ void PipeLine::MEM_stage()
   memory_sig.mem_drid = inst->DRID;
   stall_sig.mem_stall = cache_en && (!data_cache_r);
 
-  //Branch Logic
-  auto memory_v = memory_latch_ps.V;
+  //Branch/RTI Logic
   if(memory_v)
   {
+
     auto is_branch_op = micro_seq.Get_BR_OP(inst->MEM_CS);
     auto is_trap_op = micro_seq.Get_TRAP_OP(inst->MEM_CS);
     auto is_rti_op = micro_seq.Get_RTI_OP(inst->MEM_CS);
@@ -773,11 +809,8 @@ void PipeLine::MEM_stage()
     else if (is_rti_op) {
       switch (inst->rti_state) {
         case Instruction::RTI_IDLE:
-          if(simulator().state().IsPrivilegeMode()) {
-            simulator().state().TriggerPrivilegeException();
-            memory_sig.mem_pc_mux = 0;
-            break;
-          }
+          // Privilege violation is now detected in the pre-exception block above,
+          // before cache_en is computed, so no check needed here.
           if (data_cache_r) {
             inst->rti_saved_pc = MDR_OUT;
             inst->ADDRESS = inst->ADDRESS + 2; // aim at [R6+2]
@@ -810,6 +843,25 @@ void PipeLine::MEM_stage()
   else
     memory_sig.mem_pc_mux = 0; //memory not valid
 
+  // Exception check — after if(memory_v) so it catches all types:
+  //   pre-tagged (ILLEGAL_INSTRUCTION from DECODE, UNALIGNED_FETCH from FETCH),
+  //   newly detected (UNALIGNED_ACCESS, PRIVILEGE_MODE_VIOLATION from RTI above).
+  // Guarded by memory_v so bubbles never trigger this path.
+  if (memory_v && inst->exception_pending != ExceptionType::NONE) {
+    auto & ctx = cpu_state.GetTrapContext();
+    ctx.cause           = TRAP_EXCEPTION;
+    ctx.pc_to_push      = bits16(inst->NPC.to_num() - 2);
+    ctx.vector_addr     = bits16(0x0200 + (static_cast<int>(inst->exception_pending) << 1));
+    ctx.update_priority = false;
+    ctx.new_priority    = 0;
+    cpu_state.TriggerExceptionPending(true);
+    store_latch.instruction = inst;
+    store_latch.V = false;
+    stall_sig.interrupt_stall = true;
+    memory_sig.mem_pc_mux = 0;
+    return;
+  }
+
   //process trap
   memory_sig.trap_pc = 0;
   if(cache_en)
@@ -837,7 +889,7 @@ void PipeLine::MEM_stage()
 
   //load SR latch - only control signals
   /* The code below propagates the control signals from memory_sigs.CS latch
-     to store_signals.CS latch. */
+    to store_signals.CS latch. */
   inst->SR_CS = inst->MEM_CS.range<12,8>();
   
   // Propagate instruction object and update its data fields
@@ -851,6 +903,7 @@ void PipeLine::MEM_stage()
 void PipeLine::AGEX_stage()
 {
   SetStage(AGEX);
+  auto & cpu_state = simulator().state();
   auto & memory_latch = latch(MEMORY,NEW_PS);
   auto & agex_latch = latch(AGEX,PS);
   auto inst = agex_latch.instruction;
@@ -865,6 +918,12 @@ void PipeLine::AGEX_stage()
   
   inst->current_stage = "E";
   
+  if(cpu_state.IsExceptionPending()) {
+    memory_latch.instruction = inst;
+    memory_latch.V = false; // squash the instruction causing the exception
+    return;
+  }
+
   /* your code for agex_sigs stage goes here */
   // First program counter mux
   bits16 next_pc_1;
@@ -1016,11 +1075,22 @@ void PipeLine::DE_stage()
   }
   
   inst->current_stage = "D";
-  
+
+  if(cpu_state.IsExceptionPending()) {
+    agex_latch.instruction = inst;
+    agex_latch.V = false; // squash the instruction causing the exception
+    return;
+  }
+
   //get micro code state
   CONTROL_STORE_ADDRESS.range<5,1>() = inst->IR.range<15,11>();
   CONTROL_STORE_ADDRESS[0] = inst->IR[5];
   de_sig.de_ucode = micro_sequencer.GetMicroCodeAt(CONTROL_STORE_ADDRESS.to_num());
+
+  auto opcode = inst->IR.range<15,12>().to_num();
+  if (opcode == 0xA || opcode == 0xB) { // Reserved opcodes
+    inst->exception_pending = ExceptionType::ILLEGAL_INSTRUCTION;
+  }
 
   //The instruction in the decode_sigs stage also reads the register file and the condition codes.
   //The register file has two read ports: one for SR1 and one for SR2. decode_sigs.IR[8:6] are used
@@ -1096,6 +1166,17 @@ void PipeLine::FETCH_stage()
   //get the instruction from the instruction cache and the ready bit
   memory.icache_access(cpu_state.GetProgramCounter(),instruction,stall.icache_r);
 
+  auto exception = ExceptionType::NONE;
+  auto fetch_pc = cpu_state.GetProgramCounter().to_num();
+  if (fetch_pc & 1) {
+    // Unaligned instruction fetch — PC must always be even
+    exception = ExceptionType::ACV_OR_UNALIGNED;
+  } else if (cpu_state.IsPrivilegeMode() /* PSR[15]=1 = user mode */) {
+    // ACV: user mode fetch from supervisor space or device registers
+    if (fetch_pc <= 0x2FFF || fetch_pc >= 0xFE00)
+      exception = ExceptionType::ACV_OR_UNALIGNED;
+  }
+
   //the de npc latch will be the address of the next instruction
   auto de_npc = cpu_state.GetProgramCounter() + 2;
 
@@ -1145,6 +1226,7 @@ void PipeLine::FETCH_stage()
     new_instr->NPC = de_npc;
     new_instr->fetch_cycle = simulator().GetCycles();
     new_instr->current_stage = "F";
+    new_instr->exception_pending = exception;
     decode_latch.instruction = new_instr;
     decode_latch.V = decode_valid;
   } else {

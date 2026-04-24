@@ -15,6 +15,14 @@
     #include "Simulator.h"
 #endif
 
+// Exception vector numbers per LC-3b spec.
+// SetExceptionVector() computes the table address as: 0x0200 + (vector << 1)
+enum ExceptionType {
+  NONE                     = 0xFF, // sentinel — not a real vector
+  PRIVILEGE_MODE_VIOLATION = 0x00, // vector 0x00 → table addr 0x0200
+  ILLEGAL_INSTRUCTION      = 0x01, // vector 0x01 → table addr 0x0202
+  ACV_OR_UNALIGNED         = 0x02, // vector 0x02 → table addr 0x0204 (ACV and unaligned share this vector per spec)
+};
 
 class Latch;
 class Instruction
@@ -73,9 +81,11 @@ class Instruction
     RTI_READ_PSR,      // Read PSR from stack (second memory access)
     RTI_COMPLETE       // RTI complete
   };
+
   RTI_State rti_state = RTI_IDLE;
   bits16 rti_saved_pc;   // Temporary storage for PC read from stack
   bits16 rti_saved_psr;  // Temporary storage for PSR read from stack
+  ExceptionType exception_pending = NONE; // Type of exception, if any
 
   private:
   Instruction(Simulator & instance, const bits16 & instruction_bits);

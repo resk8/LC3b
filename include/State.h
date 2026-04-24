@@ -61,6 +61,24 @@ typedef struct PipeState_STORE_stage_Struct {
   bits3  sr_drid;
 } STORE_stage_Entry;
 
+enum TrapCause { TRAP_NONE, TRAP_INTERRUPT, TRAP_EXCEPTION };
+
+enum TRAP_State {
+  TRAP_IDLE,
+  TRAP_SWAP_STACK,   // Save USP, load SSP into R6 (if in user mode)
+  TRAP_PUSH_PSR,     // Push original PSR onto supervisor stack
+  TRAP_PUSH_PC,      // Push PC onto supervisor stack, update PSR
+  TRAP_VECTOR_READ   // Read handler address from vector table, set PC
+};
+
+struct TrapContext {
+  TrapCause cause          = TRAP_NONE;
+  bool      update_priority = false; // true for interrupts, false for exceptions
+  bits16    pc_to_push;              // interrupt: current PC; exception: faulting PC (NPC-2)
+  bits16    vector_addr;             // pre-computed vector table address
+  bits3     new_priority;            // only used when update_priority == true
+};
+
 typedef struct PipeState_Hazards_Struct {
   /* Internal stall signals */
   bool dep_stall,
@@ -105,9 +123,16 @@ class State
   void SetPrivilegeMode(bool user_mode) { PSR[15] = user_mode; }
   void TriggerPrivilegeException() { privilege_exception = true; }
   bool HasPrivilegeException() const { return privilege_exception; }
+  void TriggerExceptionPending(bool pending) { exception_pending = pending; }
+  bool IsExceptionPending() const { return exception_pending; }
+  void ClearExceptionPending() { exception_pending = false; }
   void ClearPrivilegeException() { privilege_exception = false; }
   void SetPriorityLevel(bits3 level) { PSR.range<10,8>() = level.range<2,0>(); }
   bits3 GetPriorityLevel() const { return PSR.range<10,8>(); }
+  void SetTrapState(TRAP_State s) { trap_state = s; }
+  TRAP_State GetTrapState() const { return trap_state; }
+  TrapContext & GetTrapContext() { return trap_ctx; }
+  const TrapContext & GetTrapContext() const { return trap_ctx; }
 
   private:
   Simulator & _simulator;
@@ -119,9 +144,12 @@ class State
   /***************************************************************/
   /* architectural state                                         */
   /***************************************************************/
-  bits16 PC;  /* program counter */
-  bits16 PSR; /* processor status register */
-  bool privilege_exception; /* privilege mode violation flag */
+  bool privilege_exception = false;
+  bool exception_pending   = false;
+  bits16 PC;
+  bits16 PSR;
+  TRAP_State  trap_state = TRAP_IDLE;
+  TrapContext trap_ctx;
 
   DE_Stage_Entry decode_sigs;
   AGEX_Stage_Entry agex_sigs;

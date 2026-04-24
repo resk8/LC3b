@@ -64,7 +64,7 @@ class PipeLine
   bool CheckForDataDependencies();
   void UpdateHistory();
   void DumpHistory();
-  void ServiceInterrupt();
+  void ServiceTrap();
   bool PipelineHasValidInstructions();
 
   private:
