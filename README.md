@@ -25,7 +25,8 @@ A cycle-accurate simulator for the LC-3b (Little Computer 3b, byte-addressable) 
 - **Detailed Timing Diagram**: Generates cycle-by-cycle visualization in `dumpsim.txt`
 - **Instruction Disassembly**: Human-readable instruction format in output
 - **Interrupt Support**: Full interrupt handling with priority-based interrupt controller, automatic pipeline drain, supervisor/user stack pointer swap, PSR and PC push to supervisor stack, vector table lookup, and PSR update (privilege, priority, condition codes)
-- **RTI Support**: Full Return from Interrupt support including privilege mode enforcement, two-cycle stack pop (saved PC + PSR), PSR restoration (privilege and priority level), and USP/SSP swap on mode transition
+- **Exception Support**: Hardware exceptions detected and routed through a unified trap service state machine: privilege mode violation (RTI from user mode), illegal instruction (reserved opcodes 0xA/0xB), and access control violation / unaligned access (user-mode fetch or data access to protected address ranges, or unaligned word access). Exceptions preserve PSR[10:8] (priority level unchanged, unlike interrupts). Vector table base: `0x0200`.
+- **RTI Support**: Full Return from Interrupt support including two-cycle stack pop (saved PC + PSR), PSR restoration (privilege and priority level), and USP/SSP swap on mode transition. RTI executed in user mode raises a privilege mode violation exception.
 
 ## The 5-Stage Pipeline
 
@@ -234,16 +235,17 @@ PC      | Instruction                   | Mem Addr  | C0   | C1   | C2   | C3   
 
 ### Stage Indicators
 
-| Symbol              | Meaning                                          |
-|---------------------|--------------------------------------------------|
-| `F`                 | Fetch stage                                      |
-| `D`                 | Decode stage                                     |
-| `E`                 | Execute stage                                    |
-| `M`                 | Memory stage                                     |
-| `S`                 | Writeback stage                                  |
-| `D*`, `E*`, `M*`    | Stalled in that stage                            |
-| `I`                 | Interrupt being serviced (pipeline frozen)        |
-| (blank)             | Instruction not yet fetched or already retired   |
+| Symbol           | Meaning                                                                                              |
+|------------------|------------------------------------------------------------------------------------------------------|
+| `F`              | Fetch stage                                                                                          |
+| `D`              | Decode stage                                                                                         |
+| `E`              | Execute stage                                                                                        |
+| `M`              | Memory stage                                                                                         |
+| `S`              | Writeback stage                                                                                      |
+| `D*`, `E*`, `M*` | Stalled in that stage                                                                                |
+| `I` (`--- INT ---`) | Interrupt being serviced (pipeline frozen)                                                        |
+| `I` (`--- EXC ---`) | Exception being serviced (pipeline frozen)                                                        |
+| (blank)          | Instruction not yet fetched or already retired                                                       |
 
 ### Example: Simple Loop with Dependencies
 
@@ -309,7 +311,7 @@ LC3b/
 │   ├── BitField.h             # Template for arbitrary-width bit fields
 │   ├── Disassembler.h         # Instruction disassembly
 │   ├── instruction.h          # Instruction class (pipeline data + RTI state machine)
-│   ├── InterruptController.h  # Interrupt controller (priority queue, state machine)
+│   ├── InterruptController.h  # Interrupt controller (priority queue, USP/SSP management)
 │   ├── Latch.h                # Pipeline latch structures
 │   ├── LC3b.h                 # ISA definitions, CS_BITS enums, type aliases
 │   ├── MainMemory.h           # Memory and cache simulation
@@ -317,7 +319,7 @@ LC3b/
 │   ├── OperationUnit.h        # ALU / shifter unit
 │   ├── PipeLine.h             # Pipeline control logic
 │   ├── Simulator.h            # Main simulator class
-│   └── State.h                # Architectural state (registers, PSR, NZP)
+│   └── State.h                # Architectural state (registers, PSR, NZP, unified TrapContext/TRAP_State)
 ├── source/                     # Implementation files
 │   ├── Disassembler.cpp       # Instruction disassembly
 │   ├── instruction.cpp        # Instruction object factory
@@ -400,7 +402,6 @@ Contributions are welcome! Areas for improvement:
 - More sophisticated branch prediction
 - Cache hierarchy modeling (multi-level cache, eviction policies)
 - Performance metrics collection (IPC, stall cycle breakdown)
-- LDI / STI reserved instruction support
 - OoO engine
 
 ## License
